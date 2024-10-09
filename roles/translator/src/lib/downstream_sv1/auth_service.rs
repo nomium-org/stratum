@@ -42,24 +42,26 @@ impl AuthService {
 
         let mut buffer = [0; 1024];
         match stream.read(&mut buffer).await {
+            Ok(0) => {
+                error!("Server closed the connection");
+                false
+            },
             Ok(n) => {
-                if n == 0 {
-                    error!("Server closed the connection");
-                    return false;
-                }
                 let response = String::from_utf8_lossy(&buffer[..n]);
                 debug!("Received response ({} bytes): {}", n, response.trim());
-
+        
                 match serde_json::from_str::<Value>(&response) {
                     Ok(json_response) => {
-                        if let Some(result) = json_response.get("result") {
-                            let authorized = result.as_bool().unwrap_or(false);
-                            info!("Authorization result: {}", authorized);
-                            authorized
-                        } else {
-                            error!("Invalid response format from auth server");
-                            false
-                        }
+                        json_response.get("result")
+                            .and_then(|result| result.as_bool())
+                            .map(|authorized| {
+                                info!("Authorization result: {}", authorized);
+                                authorized
+                            })
+                            .unwrap_or_else(|| {
+                                error!("Invalid response format from auth server");
+                                false
+                            })
                     }
                     Err(e) => {
                         error!("Failed to parse response: {:?}", e);
