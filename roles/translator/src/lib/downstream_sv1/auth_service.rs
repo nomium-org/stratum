@@ -10,7 +10,7 @@ pub struct AuthService {
 }
 
 impl AuthService {
-    pub async fn authorize(&self) -> bool {
+    pub async fn authorize(&self, name: &str, password: &str) -> bool {
         debug!("Starting authorization process");
 
         let mut stream = match TcpStream::connect(&self.auth_server_addr).await {
@@ -27,7 +27,7 @@ impl AuthService {
         let auth_request = json!({
             "id": 1,
             "method": "mining.authorize",
-            "params": ["username.worker", "password"]
+            "params": [name, password]
         });
 
         let request_str = auth_request.to_string() + "\n";
