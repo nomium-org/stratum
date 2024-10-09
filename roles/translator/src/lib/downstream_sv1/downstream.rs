@@ -535,7 +535,7 @@ impl IsServer<'static> for Downstream {
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
                 let service = self.auth_service.lock().await;
-                service.authorize().await
+                service.authorize(&request.name, &request.password).await
             })
         })
     }
