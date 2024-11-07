@@ -29,6 +29,8 @@ use stratum_common::{
     },
 };
 
+use hello::say_hello;
+
 // ShareLog
 #[derive(Debug, Clone)]
 pub struct ShareLog {
@@ -872,6 +874,8 @@ impl ChannelFactory {
 
         info!("Share details: {:?}", share_log);
         // ---- share_log
+        // Hello
+        hello::say_hello();
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
