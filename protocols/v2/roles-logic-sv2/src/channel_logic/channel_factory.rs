@@ -32,22 +32,6 @@ use stratum_common::{
 use hello::say_hello;
 use shares_logger::{hand_shake, log_share};
 
-// ShareLogProto
-#[derive(Debug, Clone)]
-pub struct ShareLogProto {
-    pub channel_id: u32,
-    pub sequence_number: u32,
-    pub job_id: u32,
-    pub nonce: u32,
-    pub ntime: u32,
-    pub version: u32,
-    pub target: Vec<u8>,
-    pub extranonce: Option<Vec<u8>>,
-    pub is_valid: bool,
-    pub error_code: Option<String>,
-    pub hash: Vec<u8>,
-    pub difficulty: f64,
-}
 /// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`) fields
 #[derive(Debug)]
 pub struct PartialSetCustomMiningJob {
@@ -858,23 +842,7 @@ impl ChannelFactory {
         let mut hash_bytes = hash.clone();
         hash_bytes.reverse();
 
-        let share_log_proto = ShareLogProto {
-            channel_id: m.get_channel_id(),
-            sequence_number: m.get_sequence_number(),
-            job_id: m.get_job_id(),
-            nonce: m.get_nonce(),
-            ntime: m.get_n_time(),
-            version: m.get_version(),
-            target: bitcoin_target_bytes,
-            extranonce: Some(extranonce.to_vec()),
-            is_valid: Target::from(hash.clone()) <= downstream_target.clone(), 
-            error_code: None,
-            hash: hash_bytes.to_vec(), 
-            difficulty: 1.0
-        };
 
-        info!("Share details: {:?}", share_log_proto);
-        // ---- share_log_proto
         // Hello
         hello::say_hello();
         shares_logger::hand_shake();
