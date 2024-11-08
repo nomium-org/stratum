@@ -878,7 +878,18 @@ impl ChannelFactory {
         // Hello
         hello::say_hello();
         shares_logger::hand_shake();
-        shares_logger::log_share(hash_bytes.to_vec());
+        let share_log = shares_logger::ShareLog::new(
+            m.get_channel_id(),
+            m.get_sequence_number(),
+            m.get_job_id(),
+            m.get_nonce(),
+            m.get_n_time(),
+            m.get_version(),
+            hash_bytes.to_vec(),
+            Target::from(hash.clone()) <= downstream_target.clone(),
+            extranonce.to_vec()
+        );
+        shares_logger::log_share(share_log);
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
