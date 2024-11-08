@@ -30,6 +30,7 @@ use stratum_common::{
 };
 
 use hello::say_hello;
+use shares_logger::hand_shake;
 
 // ShareLog
 #[derive(Debug, Clone)]
@@ -876,6 +877,7 @@ impl ChannelFactory {
         // ---- share_log
         // Hello
         hello::say_hello();
+        shares_logger::hand_shake();
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
