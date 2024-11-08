@@ -32,9 +32,9 @@ use stratum_common::{
 use hello::say_hello;
 use shares_logger::{hand_shake, log_share};
 
-// ShareLog
+// ShareLogProto
 #[derive(Debug, Clone)]
-pub struct ShareLog {
+pub struct ShareLogProto {
     pub channel_id: u32,
     pub sequence_number: u32,
     pub job_id: u32,
@@ -842,7 +842,7 @@ impl ChannelFactory {
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
 
-        // share_log ----
+        // share_log_proto ----
         let bitcoin_target_log: binary_sv2::U256 = bitcoin_target.clone().into();
         let mut bitcoin_target_bytes = bitcoin_target_log.to_vec();
         bitcoin_target_bytes.reverse();
@@ -858,7 +858,7 @@ impl ChannelFactory {
         let mut hash_bytes = hash.clone();
         hash_bytes.reverse();
 
-        let share_log = ShareLog {
+        let share_log_proto = ShareLogProto {
             channel_id: m.get_channel_id(),
             sequence_number: m.get_sequence_number(),
             job_id: m.get_job_id(),
@@ -873,8 +873,8 @@ impl ChannelFactory {
             difficulty: 1.0
         };
 
-        info!("Share details: {:?}", share_log);
-        // ---- share_log
+        info!("Share details: {:?}", share_log_proto);
+        // ---- share_log_proto
         // Hello
         hello::say_hello();
         shares_logger::hand_shake();
