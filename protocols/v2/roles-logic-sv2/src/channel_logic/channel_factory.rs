@@ -29,9 +29,6 @@ use stratum_common::{
     },
 };
 
-use hello::say_hello;
-use shares_logger::{hand_shake, log_share};
-
 /// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`) fields
 #[derive(Debug)]
 pub struct PartialSetCustomMiningJob {
