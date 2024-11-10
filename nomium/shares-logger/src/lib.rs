@@ -17,7 +17,8 @@ pub struct ShareLog {
     pub version: u32,
     pub hash: Vec<u8>,
     pub is_valid: bool,
-    pub extranonce: Vec<u8>
+    pub extranonce: Vec<u8>,
+    pub difficulty: f64,
 }
 
 impl ShareLog {
@@ -30,7 +31,8 @@ impl ShareLog {
         version: u32,
         hash: Vec<u8>,
         is_valid: bool,
-        extranonce: Vec<u8>
+        extranonce: Vec<u8>,
+        difficulty: f64,
     ) -> Self {
         Self {
             channel_id,
@@ -41,7 +43,8 @@ impl ShareLog {
             version,
             hash,
             is_valid,
-            extranonce
+            extranonce,
+            difficulty
         }
     }
 }

@@ -17,6 +17,7 @@ struct ClickhouseShare {
     pub hash: String,
     pub is_valid: u8,
     pub extranonce: String,
+    pub difficulty: f64,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -31,6 +32,7 @@ impl From<ShareLog> for ClickhouseShare {
             hash: hex::encode(share.hash),
             is_valid: if share.is_valid { 1 } else { 0 },
             extranonce: hex::encode(share.extranonce),
+            difficulty: share.difficulty,
         }
     }
 }
@@ -110,6 +112,7 @@ impl ClickhouseService {
                 hash String,
                 is_valid UInt8,
                 extranonce String,
+                difficulty Float64,
                 timestamp DateTime DEFAULT now()
             ) ENGINE = MergeTree()
             ORDER BY (timestamp, channel_id)
