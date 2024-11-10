@@ -1,21 +1,22 @@
 use crate::ShareLog;
 use crate::config::CONFIG;
 use clickhouse::{Client, Row};
-use log::{error, debug};
+use log::{error, info};
 use std::time::Duration;
 use tokio::sync::mpsc::{self, Receiver};
+use serde::Serialize;
 
-#[derive(Row)]
+#[derive(Row, Serialize)]
 struct ClickhouseShare {
-    channel_id: u32,
-    sequence_number: u32,
-    job_id: u32,
-    nonce: u32,
-    ntime: u32,
-    version: u32,
-    hash: String,
-    is_valid: bool,
-    extranonce: String,
+    pub channel_id: u32,
+    pub sequence_number: u32,
+    pub job_id: u32,
+    pub nonce: u32,
+    pub ntime: u32,
+    pub version: u32,
+    pub hash: String,
+    pub is_valid: u8,
+    pub extranonce: String,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -27,9 +28,9 @@ impl From<ShareLog> for ClickhouseShare {
             nonce: share.nonce,
             ntime: share.ntime,
             version: share.version,
-            hash: hex::encode(&share.hash),
-            is_valid: share.is_valid,
-            extranonce: hex::encode(&share.extranonce),
+            hash: hex::encode(share.hash),
+            is_valid: if share.is_valid { 1 } else { 0 },
+            extranonce: hex::encode(share.extranonce),
         }
     }
 }
@@ -41,11 +42,15 @@ pub struct ClickhouseService {
 
 impl ClickhouseService {
     pub fn new(batch_receiver: Receiver<ShareLog>) -> Self {
+        info!("Initializing ClickhouseService with config: url={}, database={}, user={}", 
+            CONFIG.url, CONFIG.database, CONFIG.username);
+        
         let client = Client::default()
             .with_url(&CONFIG.url)
             .with_database(&CONFIG.database)
             .with_user(&CONFIG.username)
             .with_password(&CONFIG.password);
+        
         Self {
             client,
             batch_receiver,
@@ -53,23 +58,37 @@ impl ClickhouseService {
     }
 
     pub async fn run(&mut self) {
+        info!("ClickhouseService started running");
         let mut batch = Vec::with_capacity(CONFIG.batch_size);
         let mut interval = tokio::time::interval(Duration::from_secs(5));
+
+        // Попробуем создать таблицу при старте сервиса
+        if let Err(e) = self.ensure_table_exists().await {
+            error!("Failed to ensure table exists: {}", e);
+            return;
+        }
+
         loop {
             tokio::select! {
                 Some(share) = self.batch_receiver.recv() => {
                     batch.push(share);
+                    info!("Received share, batch size: {}/{}", batch.len(), CONFIG.batch_size);
+                    
                     if batch.len() >= CONFIG.batch_size {
-                        if let Err(e) = self.insert_batch(&batch).await {
-                            error!("Failed to insert batch: {}", e);
+                        info!("Batch size reached, attempting to insert batch");
+                        match self.insert_batch(&batch).await {
+                            Ok(_) => info!("Successfully inserted batch of {} shares", batch.len()),
+                            Err(e) => error!("Failed to insert batch: {}", e),
                         }
                         batch.clear();
                     }
                 }
                 _ = interval.tick() => {
                     if !batch.is_empty() {
-                        if let Err(e) = self.insert_batch(&batch).await {
-                            error!("Failed to insert batch: {}", e);
+                        info!("Timer triggered, inserting partial batch of {} shares", batch.len());
+                        match self.insert_batch(&batch).await {
+                            Ok(_) => info!("Successfully inserted partial batch of {} shares", batch.len()),
+                            Err(e) => error!("Failed to insert partial batch: {}", e),
                         }
                         batch.clear();
                     }
@@ -78,51 +97,48 @@ impl ClickhouseService {
         }
     }
 
+    async fn ensure_table_exists(&self) -> Result<(), clickhouse::error::Error> {
+        info!("Ensuring shares table exists");
+        let query = r#"
+            CREATE TABLE IF NOT EXISTS shares (
+                channel_id UInt32,
+                sequence_number UInt32,
+                job_id UInt32,
+                nonce UInt32,
+                ntime UInt32,
+                version UInt32,
+                hash String,
+                is_valid UInt8,
+                extranonce String,
+                timestamp DateTime DEFAULT now()
+            ) ENGINE = MergeTree()
+            ORDER BY (timestamp, channel_id)
+        "#;
+
+        self.client.query(query).execute().await?;
+        info!("Shares table created or already exists");
+        Ok(())
+    }
+
     async fn insert_batch(&self, batch: &[ShareLog]) -> Result<(), clickhouse::error::Error> {
-        debug!("Starting to write batch of {} shares", batch.len());
-
-        let mut values = Vec::with_capacity(batch.len());
+        info!("Starting batch insert of {} shares", batch.len());
+        
+        let mut insert = self.client.insert("shares")?;
+        
         for share in batch {
-            let hash_str = format!("[{}]", share.hash.iter().map(|b| b.to_string()).collect::<Vec<_>>().join(","));
-            let extranonce_str = format!("[{}]", share.extranonce.iter().map(|b| b.to_string()).collect::<Vec<_>>().join(","));
-            
-            values.push(format!(
-                "({}, {}, {}, {}, {}, {}, '{}', {}, '{}')",
-                share.channel_id,
-                share.sequence_number,
-                share.job_id,
-                share.nonce,
-                share.ntime,
-                share.version,
-                hash_str,
-                if share.is_valid { 1 } else { 0 },
-                extranonce_str
-            ));
+            let clickhouse_share = ClickhouseShare::from(share.clone());
+            insert.write(&clickhouse_share).await?;
         }
-
-        let query = format!(
-            "INSERT INTO shares (
-                channel_id, sequence_number, job_id, nonce, 
-                ntime, version, hash, is_valid, extranonce
-            ) VALUES {}",
-            values.join(",")
-        );
-
-        debug!("Executing query: {}", query);
-        match self.client.query(&query).execute().await {
-            Ok(_) => {
-                debug!("Successfully wrote batch to database");
-                Ok(())
-            },
-            Err(e) => {
-                error!("Failed to write batch to database: {}", e);
-                Err(e)
-            }
-        }
+        
+        insert.end().await?;
+        
+        info!("Successfully committed batch to Clickhouse");
+        Ok(())
     }
 }
 
 pub fn create_clickhouse_service() -> (mpsc::Sender<ShareLog>, ClickhouseService) {
+    info!("Creating new ClickhouseService instance");
     let (tx, rx) = mpsc::channel(1000);
     let service = ClickhouseService::new(rx);
     (tx, service)
