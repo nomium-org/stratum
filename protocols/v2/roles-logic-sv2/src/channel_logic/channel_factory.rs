@@ -823,38 +823,20 @@ impl ChannelFactory {
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
 
-        // share_log_proto ----
-        let bitcoin_target_log: binary_sv2::U256 = bitcoin_target.clone().into();
-        let mut bitcoin_target_bytes = bitcoin_target_log.to_vec();
-        bitcoin_target_bytes.reverse();
-
-        let upstream_target_log: binary_sv2::U256 = upstream_target.clone().into();
-        let mut upstream_target_bytes = upstream_target_log.to_vec();
-        upstream_target_bytes.reverse();
-
-        let downstream_target_log: binary_sv2::U256 = downstream_target.clone().into();
-        let mut downstream_target_bytes = downstream_target_log.to_vec();
-        downstream_target_bytes.reverse();
-
-        let mut hash_bytes = hash.clone();
-        hash_bytes.reverse();
-
-
-        // Hello
-        hello::say_hello();
-        shares_logger::hand_shake();
-        let share_log = shares_logger::ShareLog::new(
+        // share_log injection ----
+        let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
             m.get_channel_id(),
             m.get_sequence_number(),
             m.get_job_id(),
             m.get_nonce(),
             m.get_n_time(),
             m.get_version(),
-            hash_bytes.to_vec(),
-            Target::from(hash.clone()) <= downstream_target.clone(),
+            hash,
+            downstream_target.clone(),
             extranonce.to_vec()
         );
         shares_logger::log_share(share_log);
+        // ---- share_log injection ----
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)

@@ -2574,6 +2574,7 @@ dependencies = [
  "env_logger",
  "hex",
  "log",
+ "mining_sv2",
  "once_cell",
  "serde",
  "serde_json",
