@@ -109,7 +109,8 @@ pub fn hand_shake() {
 }
 
 pub fn log_share(share: ShareLog) {
-    services::debug_log::log_share_hash("incoming_share", &share);
+
+    //services::debug_log::log_share_hash("incoming_share", &share);
 
     match LOGGER_CHANNELS.primary.try_send(share.clone()) {
         Ok(_) => (),

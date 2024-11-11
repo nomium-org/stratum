@@ -1,10 +1,9 @@
 use crate::ShareLog;
 use crate::config::CONFIG;
 use clickhouse::{Client, Row};
-use log::{error, info};
+use log::info;
 use std::time::Duration;
 use serde::Serialize;
-use super::debug_log::log_share_hash;
 
 #[derive(Row, Serialize)]
 struct ClickhouseShare {
@@ -62,9 +61,9 @@ impl ClickhouseService {
     }
 
     pub async fn process_share(&mut self, share: ShareLog) -> Result<(), clickhouse::error::Error> {
-        info!("Начинаем process_share");
-        super::debug_log::log_share_hash("clickhouse_process", &share);
-        info!("Закончили логирование хэша");
+        //info!("Начинаем process_share");
+        //services::debug_log::log_share_hash("clickhouse_process", &share);
+        //info!("Закончили логирование хэша");
         self.batch.push(share);
 
         let should_flush = self.batch.len() >= CONFIG.batch_size || 
