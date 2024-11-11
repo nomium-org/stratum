@@ -3,7 +3,6 @@ use crate::config::CONFIG;
 use clickhouse::{Client, Row};
 use log::{error, info};
 use std::time::Duration;
-use tokio::sync::mpsc::{self, Receiver};
 use serde::Serialize;
 
 #[derive(Row, Serialize)]
@@ -39,64 +38,63 @@ impl From<ShareLog> for ClickhouseShare {
 
 pub struct ClickhouseService {
     client: Client,
-    batch_receiver: Receiver<ShareLog>,
+    batch: Vec<ShareLog>,
+    last_flush: std::time::Instant,
 }
 
 impl ClickhouseService {
-    pub fn new(batch_receiver: Receiver<ShareLog>) -> Self {
+    pub fn new() -> Self {
         info!("Initializing ClickhouseService with config: url={}, database={}, user={}", 
             CONFIG.url, CONFIG.database, CONFIG.username);
-        
+            
         let client = Client::default()
             .with_url(&CONFIG.url)
             .with_database(&CONFIG.database)
             .with_user(&CONFIG.username)
             .with_password(&CONFIG.password);
-        
+
         Self {
             client,
-            batch_receiver,
+            batch: Vec::with_capacity(CONFIG.batch_size),
+            last_flush: std::time::Instant::now(),
         }
     }
 
-    pub async fn run(&mut self) {
-        info!("ClickhouseService started running");
-        let mut batch = Vec::with_capacity(CONFIG.batch_size);
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+    pub async fn process_share(&mut self, share: ShareLog) -> Result<(), clickhouse::error::Error> {
+        self.batch.push(share);
 
-        // Попробуем создать таблицу при старте сервиса
-        if let Err(e) = self.ensure_table_exists().await {
-            error!("Failed to ensure table exists: {}", e);
-            return;
+        let should_flush = self.batch.len() >= CONFIG.batch_size || 
+                          self.last_flush.elapsed() >= Duration::from_secs(5);
+
+        if should_flush {
+            self.flush_batch().await?;
         }
 
-        loop {
-            tokio::select! {
-                Some(share) = self.batch_receiver.recv() => {
-                    batch.push(share);
-                    info!("Received share, batch size: {}/{}", batch.len(), CONFIG.batch_size);
-                    
-                    if batch.len() >= CONFIG.batch_size {
-                        info!("Batch size reached, attempting to insert batch");
-                        match self.insert_batch(&batch).await {
-                            Ok(_) => info!("Successfully inserted batch of {} shares", batch.len()),
-                            Err(e) => error!("Failed to insert batch: {}", e),
-                        }
-                        batch.clear();
-                    }
-                }
-                _ = interval.tick() => {
-                    if !batch.is_empty() {
-                        info!("Timer triggered, inserting partial batch of {} shares", batch.len());
-                        match self.insert_batch(&batch).await {
-                            Ok(_) => info!("Successfully inserted partial batch of {} shares", batch.len()),
-                            Err(e) => error!("Failed to insert partial batch: {}", e),
-                        }
-                        batch.clear();
-                    }
-                }
-            }
+        Ok(())
+    }
+
+    async fn flush_batch(&mut self) -> Result<(), clickhouse::error::Error> {
+        if self.batch.is_empty() {
+            return Ok(());
         }
+
+        // Ensure table exists before insertion
+        self.ensure_table_exists().await?;
+
+        let batch_size = self.batch.len();
+        info!("Flushing batch of {} shares to ClickHouse", batch_size);
+
+        let mut insert = self.client.insert("shares")?;
+        for share in self.batch.drain(..) {
+            let clickhouse_share = ClickhouseShare::from(share);
+            insert.write(&clickhouse_share).await?;
+        }
+        insert.end().await?;
+
+        self.last_flush = std::time::Instant::now();
+        info!("Successfully flushed {} shares to ClickHouse", batch_size);
+
+        Ok(())
     }
 
     async fn ensure_table_exists(&self) -> Result<(), clickhouse::error::Error> {
@@ -117,32 +115,8 @@ impl ClickhouseService {
             ) ENGINE = MergeTree()
             ORDER BY (timestamp, channel_id)
         "#;
-
         self.client.query(query).execute().await?;
         info!("Shares table created or already exists");
         Ok(())
     }
-
-    async fn insert_batch(&self, batch: &[ShareLog]) -> Result<(), clickhouse::error::Error> {
-        info!("Starting batch insert of {} shares", batch.len());
-        
-        let mut insert = self.client.insert("shares")?;
-        
-        for share in batch {
-            let clickhouse_share = ClickhouseShare::from(share.clone());
-            insert.write(&clickhouse_share).await?;
-        }
-        
-        insert.end().await?;
-        
-        info!("Successfully committed batch to Clickhouse");
-        Ok(())
-    }
-}
-
-pub fn create_clickhouse_service() -> (mpsc::Sender<ShareLog>, ClickhouseService) {
-    info!("Creating new ClickhouseService instance");
-    let (tx, rx) = mpsc::channel(1000);
-    let service = ClickhouseService::new(rx);
-    (tx, service)
 }

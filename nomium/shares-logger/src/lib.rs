@@ -3,7 +3,7 @@ pub mod services;
 
 use log::info;
 use once_cell::sync::Lazy;
-use services::clickhouse::create_clickhouse_service;
+use services::clickhouse::ClickhouseService;
 use tokio::sync::mpsc::{self, error::TrySendError};
 use std::time::Duration;
 
@@ -52,47 +52,52 @@ impl ShareLog {
 struct LogChannels {
     primary: mpsc::Sender<ShareLog>,
     backup: mpsc::UnboundedSender<ShareLog>,
-    clickhouse: mpsc::Sender<ShareLog>,
 }
 
 static LOGGER_CHANNELS: Lazy<LogChannels> = Lazy::new(|| {
     let (primary_tx, primary_rx) = mpsc::channel(100);
     let (backup_tx, backup_rx) = mpsc::unbounded_channel();
-    let (clickhouse_tx, mut clickhouse_service) = create_clickhouse_service();
-
+    
+    let clickhouse_service = ClickhouseService::new();
+    
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
+            
         rt.block_on(async move {
-            tokio::spawn(async move {
-                clickhouse_service.run().await;
-            });
-            process_logs(primary_rx, backup_rx).await;
+            process_shares(primary_rx, backup_rx, clickhouse_service).await;
         });
     });
 
     LogChannels {
         primary: primary_tx,
         backup: backup_tx,
-        clickhouse: clickhouse_tx,
     }
 });
 
-async fn process_logs(
-    mut primary_rx: mpsc::Receiver<ShareLog>, 
-    mut backup_rx: mpsc::UnboundedReceiver<ShareLog>
+async fn process_shares(
+    mut primary_rx: mpsc::Receiver<ShareLog>,
+    mut backup_rx: mpsc::UnboundedReceiver<ShareLog>,
+    mut clickhouse_service: ClickhouseService,
 ) {
     let mut backup_interval = tokio::time::interval(Duration::from_secs(1));
+    
     loop {
         tokio::select! {
             Some(share) = primary_rx.recv() => {
-                info!("Share details (primary): {:?}", share);
+                info!("Processing share from primary channel: {:?}", share);
+                if let Err(e) = clickhouse_service.process_share(share).await {
+                    info!("Failed to process share in ClickHouse: {}", e);
+                }
             }
             _ = backup_interval.tick() => {
                 while let Ok(share) = backup_rx.try_recv() {
-                    info!("Share details (backup): {:?}", share);
+                    info!("Processing share from backup channel: {:?}", share);
+                    if let Err(e) = clickhouse_service.process_share(share).await {
+                        info!("Failed to process share from backup in ClickHouse: {}", e);
+                    }
                 }
             }
         }
@@ -104,12 +109,6 @@ pub fn hand_shake() {
 }
 
 pub fn log_share(share: ShareLog) {
-    // Отправляем в ClickHouse
-    if let Err(e) = LOGGER_CHANNELS.clickhouse.try_send(share.clone()) {
-        info!("Failed to send share to ClickHouse: {}", e);
-    }
-
-    // Основной и резервный логгер
     match LOGGER_CHANNELS.primary.try_send(share.clone()) {
         Ok(_) => (),
         Err(TrySendError::Full(share)) => {
