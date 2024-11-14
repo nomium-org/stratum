@@ -19,6 +19,7 @@ use std::{collections::HashMap, convert::TryInto, sync::Arc};
 use template_distribution_sv2::{NewTemplate, SetNewPrevHash as SetNewPrevHashFromTp};
 
 use tracing::{debug, error, info, trace, warn};
+use std::backtrace::Backtrace;
 
 use stratum_common::{
     bitcoin,
@@ -834,6 +835,16 @@ impl ChannelFactory {
             hash,
             downstream_target.clone(),
             extranonce.to_vec()
+        );
+        info!(
+            "Logging share at {}:{} in {}: get_n_time={}, get_job_id={}, get_nonce={}\nBacktrace: {:?}", 
+            file!(), 
+            line!(),
+            module_path!(),
+            m.get_n_time(),
+            m.get_job_id(), 
+            m.get_nonce(),
+            Backtrace::force_capture()
         );
         shares_logger::log_share(share_log);
         // ---- share_log injection ----
