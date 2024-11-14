@@ -27,7 +27,6 @@ tracing = { version = "0.1"}
 chacha20poly1305 = { version = "0.10.1"}
 nohash-hasher = "0.2.0"
 siphasher = "1"
-hello = { path = "../../../nomium/hello" }
 shares-logger = { path = "../../../nomium/shares-logger" }
 
 [dev-dependencies]
