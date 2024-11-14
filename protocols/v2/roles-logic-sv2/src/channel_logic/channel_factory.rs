@@ -824,30 +824,28 @@ impl ChannelFactory {
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
 
-        // share_log injection ----
-        let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
-            m.get_channel_id(),
-            m.get_sequence_number(),
-            m.get_job_id(),
-            m.get_nonce(),
-            m.get_n_time(),
-            m.get_version(),
-            hash,
-            downstream_target.clone(),
-            extranonce.to_vec()
-        );
-        info!(
-            "Logging share at {}:{} in {}: get_n_time={}, get_job_id={}, get_nonce={}\nBacktrace: {:?}", 
-            file!(), 
-            line!(),
-            module_path!(),
-            m.get_n_time(),
-            m.get_job_id(), 
-            m.get_nonce(),
-            Backtrace::force_capture()
-        );
-        shares_logger::log_share(share_log);
-        // ---- share_log injection ----
+        // NOMIUM share_log injection ----
+        match self.kind {
+            ExtendedChannelKind::Pool => {
+                let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                    m.get_channel_id(),
+                    m.get_sequence_number(),
+                    m.get_job_id(),
+                    m.get_nonce(),
+                    m.get_n_time(),
+                    m.get_version(),
+                    hash,
+                    downstream_target.clone(),
+                    extranonce.to_vec()
+                );
+                info!("Calling share logging for POOL");
+                shares_logger::log_share(share_log);
+            },
+            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
+                info!("Skipping share logging for PROXY");
+            }
+        }
+        // ---- NOMIUM share_log injection ----
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
