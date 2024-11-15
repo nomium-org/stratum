@@ -57,7 +57,7 @@ pub struct ClickhouseService {
 
 impl ClickhouseService {
     pub fn new() -> Self {
-        info!("Инициализация ClickhouseService с конфигурацией: url={}, database={}, user={}", 
+        info!("Initializing ClickhouseService with configuration: url={}, database={}, user={}", 
         CONFIG.clickhouse_url, CONFIG.clickhouse_database, CONFIG.clickhouse_username);
 
         let client = Client::default()
@@ -89,23 +89,23 @@ impl ClickhouseService {
 
         self.ensure_table_exists().await?;
         let batch_size = self.batch.len();
-        info!("Начинаем запись батча из {} записей в ClickHouse", batch_size);
+        info!("Starting to write batch of {} records to ClickHouse", batch_size);
 
         let mut insert = self.client.insert("shares")?;
         
         for (index, share) in self.batch.drain(..).enumerate() {
             let clickhouse_share = ClickhouseShare::from(share);
-            info!("Подготовлена запись {}/{}: hash={}, extranonce={}", 
+            info!("Prepared record {}/{}: hash={}, extranonce={}", 
                 index + 1, batch_size, clickhouse_share.hash, clickhouse_share.extranonce);
                 
             if let Err(e) = insert.write(&clickhouse_share).await {
-                error!("Ошибка записи share в ClickHouse: {:?}", e);
+                error!("Error writing share to ClickHouse: {:?}", e);
                 return Err(e);
             }
         }
 
         if let Err(e) = insert.end().await {
-            error!("Ошибка завершения batch insert: {:?}", e);
+            error!("Error finalizing batch insert: {:?}", e);
             return Err(e);
         }
 
@@ -115,7 +115,7 @@ impl ClickhouseService {
     }
 
     async fn ensure_table_exists(&self) -> Result<(), clickhouse::error::Error> {
-        info!("Проверка существования таблицы shares");
+        info!("Checking existence of shares table");
         
         let create_table_query = r#"
             CREATE TABLE IF NOT EXISTS shares (
@@ -156,7 +156,7 @@ impl ClickhouseService {
         "#;
         self.client.query(create_mv_query).execute().await?;
         
-        info!("Таблица и материализованное представление созданы или уже существуют");
+        info!("Table and materialized view created or already exist");
         Ok(())
     }
 }
