@@ -58,23 +58,24 @@ pub struct ClickhouseService {
 impl ClickhouseService {
     pub fn new() -> Self {
         info!("Инициализация ClickhouseService с конфигурацией: url={}, database={}, user={}", 
-            CONFIG.url, CONFIG.database, CONFIG.username);
+        CONFIG.clickhouse_url, CONFIG.clickhouse_database, CONFIG.clickhouse_username);
+
         let client = Client::default()
-            .with_url(&CONFIG.url)
-            .with_database(&CONFIG.database)
-            .with_user(&CONFIG.username)
-            .with_password(&CONFIG.password);
+            .with_url(&CONFIG.clickhouse_url)
+            .with_database(&CONFIG.clickhouse_database)
+            .with_user(&CONFIG.clickhouse_username)
+            .with_password(&CONFIG.clickhouse_password);
         Self {
             client,
-            batch: Vec::with_capacity(CONFIG.batch_size),
+            batch: Vec::with_capacity(CONFIG.clickhouse_batch_size),
             last_flush: std::time::Instant::now(),
         }
     }
 
     pub async fn process_share(&mut self, share: ShareLog) -> Result<(), clickhouse::error::Error> {
         self.batch.push(share);
-        let should_flush = self.batch.len() >= CONFIG.batch_size || 
-                          self.last_flush.elapsed() >= Duration::from_secs(5);
+        let should_flush = self.batch.len() >= CONFIG.clickhouse_batch_size || 
+                   self.last_flush.elapsed() >= Duration::from_secs(CONFIG.batch_flush_interval_secs);
         if should_flush {
             self.flush_batch().await?;
         }
