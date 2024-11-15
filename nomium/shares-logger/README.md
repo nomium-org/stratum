@@ -97,3 +97,28 @@ Query results show:
 - `hashrate`: Average hashrate in hashes per second
 
 The materialized view automatically aggregates data per minute, making these queries efficient for real-time monitoring and historical analysis.
+
+## Known Limitations and Future Improvements
+
+This code is a prototype implementation and has several known issues that should be addressed for production use:
+
+### Error Handling
+1. Asynchronous Channel Communication
+   - Limited error handling for channel transmission failures
+   - No proper recovery mechanism for channel overflow situations
+   - Missing backpressure handling
+
+2. Database Operations
+   - Basic error handling for database operations
+   - No retry mechanism for failed database writes
+   - Missing transaction support for batch operations
+   - No connection pool implementation
+   - Limited connection error recovery
+
+3. Database Schema
+   - Current schema needs optimization for large-scale deployments
+   - Index strategy might need adjustment based on query patterns
+   - Materialized view refresh strategy needs review
+   - Partition strategy might need optimization for long-term data storage
+
+These limitations are known and documented for future improvements.
