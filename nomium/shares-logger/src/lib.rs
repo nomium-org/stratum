@@ -105,10 +105,6 @@ async fn process_shares(
     }
 }
 
-pub fn hand_shake() {
-    info!("!!! SHARES-LOGGER !!!");
-}
-
 pub fn log_share(share: ShareLog) {
 
     //services::debug_log::log_share_hash("incoming_share", &share);
