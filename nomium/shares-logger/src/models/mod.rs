@@ -1,5 +1,5 @@
-mod share;
+mod share_log;
 mod clickhouse_share;
 
-pub use share::ShareLog;
+pub use share_log::ShareLog;
 pub use clickhouse_share::ClickhouseShare;
