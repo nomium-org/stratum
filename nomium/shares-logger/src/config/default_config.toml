@@ -1,0 +1,11 @@
+[clickhouse]
+url = "http://localhost:8123"
+database = "mining"
+username = "default"
+password = "5555"
+batch_size = 2
+batch_flush_interval_secs = 5
+
+[processing]
+primary_channel_buffer_size = 100
+backup_check_interval_secs = 1

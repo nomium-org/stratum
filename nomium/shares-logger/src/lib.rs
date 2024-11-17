@@ -7,8 +7,8 @@ use once_cell::sync::Lazy;
 use services::clickhouse::ClickhouseService;
 use tokio::sync::mpsc::{self, error::TrySendError};
 use std::time::Duration;
-use crate::config::CONFIG;
 use crate::models::ShareLog;
+use crate::config::SETTINGS;
 
 
 struct LogChannels {
@@ -17,7 +17,7 @@ struct LogChannels {
 }
 
 static LOGGER_CHANNELS: Lazy<LogChannels> = Lazy::new(|| {
-    let (primary_tx, primary_rx) = mpsc::channel(CONFIG.primary_channel_buffer_size);
+    let (primary_tx, primary_rx) = mpsc::channel(SETTINGS.processing.primary_channel_buffer_size);
     let (backup_tx, backup_rx) = mpsc::unbounded_channel();
     
     let clickhouse_service = ClickhouseService::new();
@@ -44,7 +44,7 @@ async fn process_shares(
     mut backup_rx: mpsc::UnboundedReceiver<ShareLog>,
     mut clickhouse_service: ClickhouseService,
 ) {
-    let mut backup_interval = tokio::time::interval(Duration::from_secs(CONFIG.backup_check_interval_secs));
+    let mut backup_interval = tokio::time::interval(Duration::from_secs(SETTINGS.processing.backup_check_interval_secs));
     
     loop {
         tokio::select! {

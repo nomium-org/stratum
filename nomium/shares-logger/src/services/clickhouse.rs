@@ -1,4 +1,4 @@
-use crate::config::CONFIG;
+use crate::config::SETTINGS;
 use clickhouse::Client;
 use log::{info, error};
 use std::time::Duration;
@@ -13,24 +13,24 @@ pub struct ClickhouseService {
 impl ClickhouseService {
     pub fn new() -> Self {
         info!("Initializing ClickhouseService with configuration: url={}, database={}, user={}", 
-        CONFIG.clickhouse_url, CONFIG.clickhouse_database, CONFIG.clickhouse_username);
+        SETTINGS.clickhouse.url, SETTINGS.clickhouse.database, SETTINGS.clickhouse.username);
 
         let client = Client::default()
-            .with_url(&CONFIG.clickhouse_url)
-            .with_database(&CONFIG.clickhouse_database)
-            .with_user(&CONFIG.clickhouse_username)
-            .with_password(&CONFIG.clickhouse_password);
+            .with_url(&SETTINGS.clickhouse.url)
+            .with_database(&SETTINGS.clickhouse.database)
+            .with_user(&SETTINGS.clickhouse.username)
+            .with_password(&SETTINGS.clickhouse.password);
         Self {
             client,
-            batch: Vec::with_capacity(CONFIG.clickhouse_batch_size),
+            batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         }
     }
 
     pub async fn process_share(&mut self, share: ShareLog) -> Result<(), clickhouse::error::Error> {
         self.batch.push(share);
-        let should_flush = self.batch.len() >= CONFIG.clickhouse_batch_size || 
-                   self.last_flush.elapsed() >= Duration::from_secs(CONFIG.batch_flush_interval_secs);
+        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
+                   self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
         if should_flush {
             self.flush_batch().await?;
         }
