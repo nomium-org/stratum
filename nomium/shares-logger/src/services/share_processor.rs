@@ -1,4 +1,4 @@
-use crate::ShareLog;
+use crate::models::ShareLog;
 use mining_sv2::Target;
 use super::difficulty::DifficultyService;
 
