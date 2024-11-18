@@ -2,6 +2,7 @@ use serde::Deserialize;
 use config::{Config, ConfigError, Environment, File};
 use std::sync::Once;
 use once_cell::sync::Lazy;
+use log::info;
 
 static INIT: Once = Once::new();
 
@@ -30,23 +31,32 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let default_config = include_str!("default_config.toml");
+
+        log::info!("Logging environment variables with prefix SHARES_LOGGER:");
+        log_environment_variables();
+
+        log::info!("Loading configuration from default_config.toml...");
         
         let mut builder = Config::builder();
-        
+
         builder = builder.add_source(File::from_str(
             default_config,
             config::FileFormat::Toml
         ));
 
-        // examples: 
-        // export SHARES_LOGGER_CLICKHOUSE_URL="http://custom-host:8123"
-        // export SHARES_LOGGER_CLICKHOUSE_BATCH_FLUSH_INTERVAL_SECS="10"
         builder = builder.add_source(
             Environment::with_prefix("SHARES_LOGGER")
                 .separator("_")
         );
 
-        builder.build()?.try_deserialize()
+        let settings = builder.build()?.try_deserialize::<Settings>();
+
+        match &settings {
+            Ok(s) => log::info!("Loaded configuration: {:?}", s),
+            Err(e) => log::error!("Failed to load configuration: {:?}", e),
+        };
+
+        settings
     }
 }
 
@@ -57,3 +67,11 @@ pub static SETTINGS: Lazy<Settings> = Lazy::new(|| {
 
     Settings::new().expect("Failed to load settings")
 });
+
+fn log_environment_variables() {
+    for (key, value) in std::env::vars() {
+        if key.starts_with("SHARES_LOGGER") {
+            info!("Environment variable: {} = {}", key, value);
+        }
+    }
+}
