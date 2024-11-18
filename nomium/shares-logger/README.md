@@ -11,13 +11,21 @@ Shares Logger handles the collection, processing and storage of mining share sub
 ```
 shares-logger/
 ├── src/
-│   ├── config.rs         # Configuration settings for ClickHouse and logging
-│   ├── lib.rs           # Core functionality and share logging implementation
-│   ├── services/
-│   │   ├── clickhouse.rs    # ClickHouse database interaction
-│   │   ├── debug_log.rs     # Debug logging functionality
-│   │   ├── difficulty.rs    # Mining difficulty calculations
-│   │   └── share_processor.rs # Share data processing logic
+│ ├── config/
+│ │ ├── mod.rs # Configuration module exports
+│ │ ├── settings.rs # Configuration implementation
+│ │ └── default_config.toml # Default configuration values
+│ ├── models/
+│ │ ├── mod.rs # Models module exports
+│ │ ├── share_log.rs # Share logging data structure
+│ │ └── clickhouse_share.rs # ClickHouse-specific share model
+│ ├── services/
+│ │ ├── mod.rs # Services module exports
+│ │ ├── clickhouse.rs # ClickHouse database interaction
+│ │ ├── debug_log.rs # Debug logging functionality
+│ │ ├── difficulty.rs # Mining difficulty calculations
+│ │ └── share_processor.rs # Share data processing logic
+│ └── lib.rs # Core functionality and share logging implementation
 └── Cargo.toml
 ```
 
@@ -46,12 +54,37 @@ shares_logger::log_share(share_log);
 ```
 
 ## Configuration
+The crate supports configuration through both TOML files and environment variables.
 
-The crate uses a configuration structure that can be customized for:
-- ClickHouse connection details
-- Batch processing settings
-- Buffer sizes
-- Logging intervals
+### Environment Variables
+All configuration options can be overridden using environment variables with the prefix `SHARES_LOGGER__`. 
+Use double underscores (`__`) as separators for nested configuration values.
+
+Examples:
+- `SHARES_LOGGER__CLICKHOUSE__URL=http://localhost:8123`
+- `SHARES_LOGGER__CLICKHOUSE__DATABASE=mining`
+- `SHARES_LOGGER__CLICKHOUSE__USERNAME=default`
+- `SHARES_LOGGER__CLICKHOUSE__PASSWORD=5555`
+- `SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=2`
+- `SHARES_LOGGER__CLICKHOUSE__BATCH_FLUSH_INTERVAL_SECS=5`
+- `SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=100`
+- `SHARES_LOGGER__PROCESSING__BACKUP_CHECK_INTERVAL_SECS=1`
+
+### Default Configuration
+Default values are specified in `config/default_config.toml`:
+
+```toml
+[clickhouse]
+url = "http://localhost:8123"
+database = "mining"
+username = "default"
+password = "5555"
+batch_size = 2
+batch_flush_interval_secs = 5
+
+[processing]
+primary_channel_buffer_size = 100
+backup_check_interval_secs = 1
 
 ## Database Queries Examples
 
