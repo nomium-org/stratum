@@ -31,40 +31,32 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let default_config = include_str!("default_config.toml");
-
         log::info!("Logging environment variables with prefix SHARES_LOGGER:");
         log_environment_variables();
-
         log::info!("Loading configuration from default_config.toml...");
-        
-        let mut builder = Config::builder();
-
-        builder = builder.add_source(File::from_str(
-            default_config,
-            config::FileFormat::Toml
-        ));
-
-        builder = builder.add_source(
-            Environment::with_prefix("SHARES_LOGGER")
-                .separator("_")
-        );
-
-        let settings = builder.build()?.try_deserialize::<Settings>();
-
+        let builder = Config::builder()
+            .add_source(File::from_str(
+                default_config,
+                config::FileFormat::Toml
+            ))
+            .add_source(
+                Environment::with_prefix("SHARES_LOGGER")
+                    .separator("__") //double "_"
+            )
+            .build()?;
+        let settings = builder.try_deserialize::<Settings>();
         match &settings {
             Ok(s) => log::info!("Loaded configuration: {:?}", s),
             Err(e) => log::error!("Failed to load configuration: {:?}", e),
         };
-
         settings
     }
 }
 
 pub static SETTINGS: Lazy<Settings> = Lazy::new(|| {
     INIT.call_once(|| {
-        // 
+        // Initialization code if needed
     });
-
     Settings::new().expect("Failed to load settings")
 });
 
