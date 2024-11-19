@@ -1,15 +1,15 @@
 pub mod config;
-pub mod services;
+pub mod errors;
 pub mod models;
+pub mod services;
 
+use crate::config::SETTINGS;
+use crate::models::ShareLog;
 use log::info;
 use once_cell::sync::Lazy;
 use services::clickhouse::ClickhouseService;
-use tokio::sync::mpsc::{self, error::TrySendError};
 use std::time::Duration;
-use crate::models::ShareLog;
-use crate::config::SETTINGS;
-
+use tokio::sync::mpsc::{self, error::TrySendError};
 
 struct LogChannels {
     primary: mpsc::Sender<ShareLog>,
@@ -19,15 +19,16 @@ struct LogChannels {
 static LOGGER_CHANNELS: Lazy<LogChannels> = Lazy::new(|| {
     let (primary_tx, primary_rx) = mpsc::channel(SETTINGS.processing.primary_channel_buffer_size);
     let (backup_tx, backup_rx) = mpsc::unbounded_channel();
-    
-    let clickhouse_service = ClickhouseService::new();
-    
+
+    let clickhouse_service =
+        ClickhouseService::new().expect("Failed to initialize ClickhouseService");
+
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
-            
+
         rt.block_on(async move {
             process_shares(primary_rx, backup_rx, clickhouse_service).await;
         });
@@ -44,8 +45,10 @@ async fn process_shares(
     mut backup_rx: mpsc::UnboundedReceiver<ShareLog>,
     mut clickhouse_service: ClickhouseService,
 ) {
-    let mut backup_interval = tokio::time::interval(Duration::from_secs(SETTINGS.processing.backup_check_interval_secs));
-    
+    let mut backup_interval = tokio::time::interval(Duration::from_secs(
+        SETTINGS.processing.backup_check_interval_secs,
+    ));
+
     loop {
         tokio::select! {
             Some(share) = primary_rx.recv() => {
@@ -67,7 +70,6 @@ async fn process_shares(
 }
 
 pub fn log_share(share: ShareLog) {
-
     match LOGGER_CHANNELS.primary.try_send(share.clone()) {
         Ok(_) => (),
         Err(TrySendError::Full(share)) => {
