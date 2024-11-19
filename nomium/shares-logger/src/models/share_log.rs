@@ -9,9 +9,17 @@ pub struct ShareLog {
     pub ntime: u32,
     pub version: u32,
     pub hash: Vec<u8>,
-    pub is_valid: bool,
+    pub share_status: ShareStatus,
     pub extranonce: Vec<u8>,
     pub difficulty: f64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum ShareStatus {
+    Invalid = 0,
+    NetworkValid = 1,
+    PoolValid = 2,
+    MinerValid = 3,
 }
 
 impl ShareLog {
@@ -23,7 +31,7 @@ impl ShareLog {
         ntime: u32,
         version: u32,
         hash: Vec<u8>,
-        is_valid: bool,
+        share_status: ShareStatus,
         extranonce: Vec<u8>,
         difficulty: f64,
     ) -> Self {
@@ -35,7 +43,7 @@ impl ShareLog {
             ntime,
             version,
             hash,
-            is_valid,
+            share_status,
             extranonce,
             difficulty
         }

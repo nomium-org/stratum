@@ -11,7 +11,7 @@ pub struct ClickhouseShare {
     pub ntime: u32,
     pub version: u32,
     pub hash: String,
-    pub is_valid: u8,
+    pub share_status: u8,
     pub extranonce: String,
     pub difficulty: f64,
 }
@@ -39,7 +39,7 @@ impl From<ShareLog> for ClickhouseShare {
             ntime: share.ntime,
             version: share.version,
             hash: hash_hex,
-            is_valid: if share.is_valid { 1 } else { 0 },
+            share_status: share.share_status as u8,
             extranonce: extranonce_hex,
             difficulty: share.difficulty,
         }

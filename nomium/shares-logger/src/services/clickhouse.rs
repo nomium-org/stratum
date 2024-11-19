@@ -1,7 +1,7 @@
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use clickhouse::Client;
-use log::{info, error};
+use log::info;
 use std::time::Duration;
 use crate::models::{ShareLog, ClickhouseShare};
 
@@ -83,7 +83,7 @@ impl ClickhouseService {
                 ntime UInt32,
                 version UInt32,
                 hash String,
-                is_valid UInt8,
+                share_status UInt8,
                 extranonce String,
                 difficulty Float64,
                 timestamp DateTime64(3) DEFAULT now64(3)

@@ -1,6 +1,7 @@
 use crate::models::ShareLog;
 use mining_sv2::Target;
 use super::difficulty::DifficultyService;
+use crate::models::ShareStatus;
 
 pub struct ShareProcessor;
 
@@ -20,6 +21,8 @@ impl ShareProcessor {
         hash_bytes.reverse();
         let difficulty = DifficultyService::calculate_difficulty_from_hash(&hash_bytes);
 
+        let status = ShareStatus::NetworkValid;
+
         ShareLog::new(
             channel_id,
             sequence_number,
@@ -28,7 +31,7 @@ impl ShareProcessor {
             ntime, 
             version,
             hash_bytes.to_vec(),
-            Target::from(hash) <= downstream_target,
+            status,
             extranonce,
             difficulty,
         )
