@@ -20,6 +20,7 @@ impl ClickhouseService {
             .with_database(&SETTINGS.clickhouse.database)
             .with_user(&SETTINGS.clickhouse.username)
             .with_password(&SETTINGS.clickhouse.password);
+
         Self {
             client,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
@@ -46,20 +47,20 @@ impl ClickhouseService {
         let batch_size = self.batch.len();
         info!("Starting to write batch of {} records to ClickHouse", batch_size);
 
-        let mut insert = self.client.insert("shares")?;
+        let mut batch_inserter = self.client.insert("shares")?;
         
         for (index, share) in self.batch.drain(..).enumerate() {
             let clickhouse_share = ClickhouseShare::from(share);
             info!("Prepared record {}/{}: hash={}, extranonce={}", 
                 index + 1, batch_size, clickhouse_share.hash, clickhouse_share.extranonce);
                 
-            if let Err(e) = insert.write(&clickhouse_share).await {
+            if let Err(e) = batch_inserter.write(&clickhouse_share).await {
                 error!("Error writing share to ClickHouse: {:?}", e);
                 return Err(e);
             }
         }
 
-        if let Err(e) = insert.end().await {
+        if let Err(e) = batch_inserter.end().await {
             error!("Error finalizing batch insert: {:?}", e);
             return Err(e);
         }
