@@ -30,10 +30,13 @@ pub struct Settings {
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
+        
         let default_config = include_str!("default_config.toml");
+        
         log::info!("Logging environment variables with prefix SHARES_LOGGER:");
         log_environment_variables();
         log::info!("Loading configuration from default_config.toml...");
+        
         let builder = Config::builder()
             .add_source(File::from_str(
                 default_config,
@@ -44,11 +47,14 @@ impl Settings {
                     .separator("__") //double "_"
             )
             .build()?;
+        
         let settings = builder.try_deserialize::<Settings>();
+        
         match &settings {
             Ok(s) => log::info!("Loaded configuration: {:?}", s),
             Err(e) => log::error!("Failed to load configuration: {:?}", e),
         };
+        
         settings
     }
 }
