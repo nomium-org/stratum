@@ -7,6 +7,7 @@ use clickhouse::Client;
 use log::info;
 use std::time::Duration;
 
+#[derive(Clone)]
 pub struct ClickhouseStorage {
     client: Client,
     batch: Vec<ShareLog>,
