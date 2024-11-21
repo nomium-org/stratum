@@ -1,21 +1,21 @@
+use async_trait::async_trait;
+use crate::traits::ShareStorage;
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
+use crate::models::{ShareLog, ClickhouseShare};
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
-use crate::models::{ShareLog, ClickhouseShare};
 
-pub struct ClickhouseService {
+pub struct ClickhouseStorage {
     client: Client,
     batch: Vec<ShareLog>,
     last_flush: std::time::Instant,
 }
 
-impl ClickhouseService {
+impl ClickhouseStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
-        info!("Initializing ClickhouseService with configuration: url={}, database={}, user={}", 
-            SETTINGS.clickhouse.url, SETTINGS.clickhouse.database, SETTINGS.clickhouse.username);
-
+        info!("Initializing ClickhouseStorage...");
         let client = Client::default()
             .with_url(&SETTINGS.clickhouse.url)
             .with_database(&SETTINGS.clickhouse.database)
@@ -27,48 +27,6 @@ impl ClickhouseService {
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         })
-    }
-
-    pub async fn process_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
-        self.batch.push(share);
-        
-        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
-                          self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
-        
-        if should_flush {
-            self.flush_batch().await?;
-        }
-        Ok(())
-    }
-
-    async fn flush_batch(&mut self) -> Result<(), ClickhouseError> {
-        if self.batch.is_empty() {
-            return Ok(());
-        }
-
-        self.ensure_table_exists().await?;
-        
-        let batch_size = self.batch.len();
-        info!("Starting to write batch of {} records to ClickHouse", batch_size);
-
-        let mut batch_inserter = self.client.insert("shares")
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-
-        for (index, share) in self.batch.drain(..).enumerate() {
-            let clickhouse_share = ClickhouseShare::from(share);
-            info!("Prepared record {}/{}: hash={}, extranonce={}", 
-                index + 1, batch_size, clickhouse_share.hash, clickhouse_share.extranonce);
-                
-            batch_inserter.write(&clickhouse_share).await
-                .map_err(|e| ClickhouseError::BatchInsertError(format!("Failed to write share: {}", e)))?;
-        }
-
-        batch_inserter.end().await
-            .map_err(|e| ClickhouseError::BatchInsertError(format!("Failed to finalize batch insert: {}", e)))?;
-
-        self.last_flush = std::time::Instant::now();
-        info!("Successfully written batch of {} records to ClickHouse", batch_size);
-        Ok(())
     }
 
     async fn ensure_table_exists(&self) -> Result<(), ClickhouseError> {
@@ -122,6 +80,58 @@ impl ClickhouseService {
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
 
         info!("Table and materialized view created or already exist");
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ShareStorage for ClickhouseStorage {
+    async fn init(&self) -> Result<(), ClickhouseError> {
+        self.ensure_table_exists().await
+    }
+
+    async fn store_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
+        self.batch.push(share);
+        
+        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
+                          self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
+        
+        if should_flush {
+            self.flush().await?;
+        }
+        Ok(())
+    }
+
+    async fn store_batch(&mut self, shares: Vec<ShareLog>) -> Result<(), ClickhouseError> {
+        for share in shares {
+            self.store_share(share).await?;
+        }
+        Ok(())
+    }
+
+    async fn flush(&mut self) -> Result<(), ClickhouseError> {
+        if self.batch.is_empty() {
+            return Ok(());
+        }
+
+        let batch_size = self.batch.len();
+        info!("Flushing batch of {} records", batch_size);
+
+        let mut batch_inserter = self.client.insert("shares")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+
+        for share in self.batch.drain(..) {
+            let clickhouse_share = ClickhouseShare::from(share);
+            batch_inserter.write(&clickhouse_share).await
+                .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        }
+
+        batch_inserter.end().await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
+        self.last_flush = std::time::Instant::now();
+        info!("Successfully flushed {} records", batch_size);
+        
         Ok(())
     }
 }
