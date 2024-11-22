@@ -11,21 +11,35 @@ Shares Logger handles the collection, processing and storage of mining share sub
 ```
 shares-logger/
 ├── src/
-│ ├── config/
-│ │ ├── mod.rs # Configuration module exports
-│ │ ├── settings.rs # Configuration implementation
-│ │ └── default_config.toml # Default configuration values
-│ ├── models/
-│ │ ├── mod.rs # Models module exports
-│ │ ├── share_log.rs # Share logging data structure
-│ │ └── clickhouse_share.rs # ClickHouse-specific share model
-│ ├── services/
-│ │ ├── mod.rs # Services module exports
-│ │ ├── clickhouse.rs # ClickHouse database interaction
-│ │ ├── debug_log.rs # Debug logging functionality
-│ │ ├── difficulty.rs # Mining difficulty calculations
-│ │ └── share_processor.rs # Share data processing logic
-│ └── lib.rs # Core functionality and share logging implementation
+│   ├── config/
+│   │   ├── mod.rs           # Configuration module exports
+│   │   ├── settings.rs      # Configuration implementation 
+│   │   └── default_config.toml  # Default configuration values
+│   ├── errors/
+│   │   ├── mod.rs           # Error types module exports
+│   │   └── clickhouse.rs    # ClickHouse-specific error types
+│   ├── models/
+│   │   ├── mod.rs           # Models module exports
+│   │   ├── share_log.rs     # Share logging data structure
+│   │   └── clickhouse_share.rs  # ClickHouse-specific share model
+│   ├── services/
+│   │   ├── mod.rs           # Services module exports
+│   │   ├── difficulty.rs    # Mining difficulty calculations
+│   │   └── share_processor.rs    # Share data processing logic
+│   ├── storage/
+│   │   ├── mod.rs           # Storage module exports
+│   │   └── clickhouse/      # ClickHouse storage implementation
+│   │       ├── mod.rs       # ClickHouse module exports
+│   │       └── service.rs   # ClickHouse storage service implementation with batching and flush logic
+│   ├── traits/
+│   │   ├── mod.rs           # Traits module exports
+│   │   └── storage.rs       # Storage trait definitions
+│   └── lib.rs               # Library root and share logging implementation
+├── tests/
+│   ├── common/
+│   │   ├── mod.rs           # Test utilities module exports
+│   │   └── mock_storage.rs  # Mock storage for testing
+│   └── highload_test.rs     # High-load testing scenarios
 └── Cargo.toml
 ```
 
@@ -155,3 +169,22 @@ This code is a prototype implementation and has several known issues that should
    - Partition strategy might need optimization for long-term data storage
 
 These limitations are known and documented for future improvements.
+
+## Testing
+
+### High-Load Testing
+The crate includes comprehensive high-load testing to ensure reliable performance under stress conditions.
+
+#### Purpose
+The high-load test (`tests/highload_test.rs`) verifies:
+- Correct handling of rapid share submissions
+- Proper functioning of the primary and backup channels
+- Data integrity during high-frequency operations
+- Sequential processing of shares
+- No data loss under load
+
+#### Running Tests
+Execute the high-load test using:
+```bash
+cargo test test_highload_share_processing -- --nocapture
+```
