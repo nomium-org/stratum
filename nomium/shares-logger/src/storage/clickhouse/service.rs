@@ -86,26 +86,24 @@ impl ClickhouseStorage {
 }
 
 #[async_trait]
-impl ShareStorage for ClickhouseStorage {
+impl ShareStorage<ShareLog> for ClickhouseStorage {
     async fn init(&self) -> Result<(), ClickhouseError> {
         self.ensure_table_exists().await
     }
 
     async fn store_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
         self.batch.push(share);
-        
         let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
                           self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
-        
         if should_flush {
-            self.flush().await?;
+            ShareStorage::<ShareLog>::flush(self).await?;
         }
         Ok(())
     }
 
     async fn store_batch(&mut self, shares: Vec<ShareLog>) -> Result<(), ClickhouseError> {
         for share in shares {
-            self.store_share(share).await?;
+            ShareStorage::<ShareLog>::store_share(self, share).await?;
         }
         Ok(())
     }
@@ -129,10 +127,9 @@ impl ShareStorage for ClickhouseStorage {
 
         batch_inserter.end().await
             .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-        
+
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} records", batch_size);
-        
         Ok(())
     }
 }

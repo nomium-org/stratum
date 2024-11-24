@@ -6,7 +6,7 @@ pub mod storage;
 pub mod traits;
 
 use crate::config::SETTINGS;
-use crate::models::ShareLog;
+use crate::traits::ShareData;
 use crate::traits::ShareStorage;
 use log::info;
 use std::sync::Arc;
@@ -14,12 +14,13 @@ use tokio::sync::{mpsc::{self, error::TrySendError}, Mutex};
 use tokio::time::Duration;
 use lazy_static::lazy_static;
 use crate::storage::clickhouse::ClickhouseStorage;
+use crate::models::ShareLog;
 
 lazy_static! {
-    static ref GLOBAL_LOGGER: ShareLogger = {
+    static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
         let storage = ClickhouseStorage::new()
             .expect("Failed to create ClickHouse storage");
-        ShareLoggerBuilder::new(Box::new(storage))
+        ShareLoggerBuilder::<ShareLog>::new(Box::new(storage))
             .build()
     };
 }
@@ -28,19 +29,19 @@ pub fn log_share(share: ShareLog) {
     GLOBAL_LOGGER.log_share(share);
 }
 
-pub struct ShareLogger {
-    primary_tx: mpsc::Sender<ShareLog>,
-    backup_tx: mpsc::UnboundedSender<ShareLog>,
+pub struct ShareLogger<T: ShareData> {
+    primary_tx: mpsc::Sender<T>,
+    backup_tx: mpsc::UnboundedSender<T>,
 }
 
-pub struct ShareLoggerBuilder {
-    storage: Arc<Mutex<Box<dyn ShareStorage>>>,
+pub struct ShareLoggerBuilder<T: ShareData> {
+    storage: Arc<Mutex<Box<dyn ShareStorage<T>>>>,
     primary_channel_size: Option<usize>,
     backup_check_interval: Option<Duration>,
 }
 
-impl ShareLoggerBuilder {
-    pub fn new(storage: Box<dyn ShareStorage>) -> Self {
+impl<T: ShareData + 'static> ShareLoggerBuilder<T> {
+    pub fn new(storage: Box<dyn ShareStorage<T>>) -> Self {
         Self {
             storage: Arc::new(Mutex::new(storage)),
             primary_channel_size: None,
@@ -58,10 +59,9 @@ impl ShareLoggerBuilder {
         self
     }
 
-    pub fn build(self) -> ShareLogger {
+    pub fn build(self) -> ShareLogger<T> {
         let primary_channel_size = self.primary_channel_size
             .unwrap_or(SETTINGS.processing.primary_channel_buffer_size);
-        
         let backup_check_interval = self.backup_check_interval
             .unwrap_or(Duration::from_secs(SETTINGS.processing.backup_check_interval_secs));
 
@@ -86,8 +86,8 @@ impl ShareLoggerBuilder {
     }
 }
 
-impl ShareLogger {
-    pub fn log_share(&self, share: ShareLog) {
+impl<T: ShareData + 'static> ShareLogger<T> {
+    pub fn log_share(&self, share: T) {
         match self.primary_tx.try_send(share.clone()) {
             Ok(_) => (),
             Err(TrySendError::Full(share)) | Err(TrySendError::Closed(share)) => {
@@ -99,13 +99,12 @@ impl ShareLogger {
     }
 }
 
-async fn process_shares(
-    mut primary_rx: mpsc::Receiver<ShareLog>,
-    mut backup_rx: mpsc::UnboundedReceiver<ShareLog>,
-    storage: Arc<Mutex<Box<dyn ShareStorage>>>,
+async fn process_shares<T: ShareData>(
+    mut primary_rx: mpsc::Receiver<T>,
+    mut backup_rx: mpsc::UnboundedReceiver<T>,
+    storage: Arc<Mutex<Box<dyn ShareStorage<T>>>>,
     backup_check_interval: Duration,
 ) {
-    // Инициализация хранилища
     if let Err(e) = storage.lock().await.as_ref().init().await {
         log::error!("Failed to initialize storage: {}", e);
         return;
