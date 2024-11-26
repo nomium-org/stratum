@@ -1,2 +1,2 @@
 mod service;
-pub use service::ClickhouseStorage;
+pub use service::{ClickhouseStorage, ClickhouseBlockStorage};

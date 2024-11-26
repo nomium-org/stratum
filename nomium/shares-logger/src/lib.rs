@@ -7,7 +7,6 @@ pub mod traits;
 
 use crate::config::SETTINGS;
 use crate::traits::ShareData;
-use crate::traits::ShareStorage;
 use log::info;
 use std::sync::Arc;
 use tokio::sync::{mpsc::{self, error::TrySendError}, Mutex};
@@ -15,6 +14,9 @@ use tokio::time::Duration;
 use lazy_static::lazy_static;
 use crate::storage::clickhouse::ClickhouseStorage;
 use crate::models::ShareLog;
+use crate::traits::ShareStorage;
+use crate::storage::clickhouse::ClickhouseBlockStorage;
+use crate::models::BlockFound;
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -25,8 +27,21 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref BLOCK_LOGGER: ShareLogger<BlockFound> = {
+        let storage = ClickhouseBlockStorage::new()
+            .expect("Failed to create ClickHouse block storage");
+        ShareLoggerBuilder::<BlockFound>::new(Box::new(storage))
+            .build()
+    };
+}
+
 pub fn log_share(share: ShareLog) {
     GLOBAL_LOGGER.log_share(share);
+}
+
+pub fn log_block(block: BlockFound) {
+    BLOCK_LOGGER.log_share(block);
 }
 
 pub struct ShareLogger<T: ShareData> {
@@ -41,6 +56,7 @@ pub struct ShareLoggerBuilder<T: ShareData> {
 }
 
 impl<T: ShareData + 'static> ShareLoggerBuilder<T> {
+    
     pub fn new(storage: Box<dyn ShareStorage<T>>) -> Self {
         Self {
             storage: Arc::new(Mutex::new(storage)),

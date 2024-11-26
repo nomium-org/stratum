@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use crate::traits::ShareStorage;
+use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock}; 
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
-use crate::models::{ShareLog, ClickhouseShare};
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
@@ -11,6 +11,13 @@ use std::time::Duration;
 pub struct ClickhouseStorage {
     client: Client,
     batch: Vec<ShareLog>,
+    last_flush: std::time::Instant,
+}
+
+#[derive(Clone)]
+pub struct ClickhouseBlockStorage {
+    client: Client,
+    batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
 }
 
@@ -85,6 +92,43 @@ impl ClickhouseStorage {
     }
 }
 
+impl ClickhouseBlockStorage {
+    pub fn new() -> Result<Self, ClickhouseError> {
+        info!("Initializing ClickhouseBlockStorage...");
+        let client = Client::default()
+            .with_url(&SETTINGS.clickhouse.url)
+            .with_database(&SETTINGS.clickhouse.database)
+            .with_user(&SETTINGS.clickhouse.username)
+            .with_password(&SETTINGS.clickhouse.password);
+
+        Ok(Self {
+            client,
+            batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
+            last_flush: std::time::Instant::now(),
+        })
+    }
+
+    async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
+        info!("Checking existence of blocks table");
+        let create_table_query = r#"
+            CREATE TABLE IF NOT EXISTS blocks (
+                channel_id UInt32,
+                block_hash String,
+                timestamp UInt64,
+                found_at DateTime64(3) DEFAULT now64(3)
+            ) ENGINE = MergeTree()
+            ORDER BY (channel_id, timestamp)
+            SETTINGS index_granularity = 8192
+        "#;
+        self.client.query(create_table_query)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
+        info!("Blocks table created or already exists");
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl ShareStorage<ShareLog> for ClickhouseStorage {
     async fn init(&self) -> Result<(), ClickhouseError> {
@@ -130,6 +174,55 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
 
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} records", batch_size);
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
+    async fn init(&self) -> Result<(), ClickhouseError> {
+        self.ensure_blocks_table_exists().await
+    }
+
+    async fn store_share(&mut self, block: BlockFound) -> Result<(), ClickhouseError> {
+        self.batch.push(block);
+        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
+                          self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
+        if should_flush {
+            ShareStorage::<BlockFound>::flush(self).await?;
+        }
+        Ok(())
+    }
+
+    async fn store_batch(&mut self, blocks: Vec<BlockFound>) -> Result<(), ClickhouseError> {
+        for block in blocks {
+            ShareStorage::<BlockFound>::store_share(self, block).await?;
+        }
+        Ok(())
+    }
+
+    async fn flush(&mut self) -> Result<(), ClickhouseError> {
+        if self.batch.is_empty() {
+            return Ok(());
+        }
+
+        let batch_size = self.batch.len();
+        info!("Flushing batch of {} block records", batch_size);
+
+        let mut batch_inserter = self.client.insert("blocks")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+
+        for block in self.batch.drain(..) {
+            let clickhouse_block = ClickhouseBlock::from(block);
+            batch_inserter.write(&clickhouse_block).await
+                .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        }
+
+        batch_inserter.end().await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+
+        self.last_flush = std::time::Instant::now();
+        info!("Successfully flushed {} block records", batch_size);
         Ok(())
     }
 }

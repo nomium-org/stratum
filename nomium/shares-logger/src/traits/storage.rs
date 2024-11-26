@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crate::errors::ClickhouseError;
 use super::share_data::ShareData;
+use crate::models::BlockFound;
 
 #[async_trait]
 pub trait ShareStorage<T: ShareData>: Send + Sync {
