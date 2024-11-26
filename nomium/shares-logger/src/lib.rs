@@ -56,7 +56,7 @@ pub struct ShareLoggerBuilder<T: ShareData> {
 }
 
 impl<T: ShareData + 'static> ShareLoggerBuilder<T> {
-    
+
     pub fn new(storage: Box<dyn ShareStorage<T>>) -> Self {
         Self {
             storage: Arc::new(Mutex::new(storage)),
@@ -132,15 +132,30 @@ async fn process_shares<T: ShareData>(
         tokio::select! {
             Some(share) = primary_rx.recv() => {
                 info!("Processing share from primary channel");
-                if let Err(e) = storage.lock().await.store_share(share).await {
-                    info!("Failed to store share: {}", e);
+
+                if std::any::type_name::<T>().ends_with("BlockFound") {
+                    if let Err(e) = storage.lock().await.store_share(share).await {
+                        info!("Failed to store block: {}", e);
+                    }
+                } else {
+                    if let Err(e) = storage.lock().await.store_share(share).await {
+                        info!("Failed to store share: {}", e);
+                    }
                 }
             }
             _ = backup_interval.tick() => {
                 let mut backup_shares = Vec::new();
                 while let Ok(share) = backup_rx.try_recv() {
-                    backup_shares.push(share);
+
+                    if std::any::type_name::<T>().ends_with("BlockFound") {
+                        if let Err(e) = storage.lock().await.store_share(share).await {
+                            info!("Failed to store backup block: {}", e);
+                        }
+                    } else {
+                        backup_shares.push(share);
+                    }
                 }
+
                 if !backup_shares.is_empty() {
                     if let Err(e) = storage.lock().await.store_batch(backup_shares).await {
                         info!("Failed to store backup shares: {}", e);

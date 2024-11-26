@@ -185,12 +185,18 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
     }
 
     async fn store_share(&mut self, block: BlockFound) -> Result<(), ClickhouseError> {
-        self.batch.push(block);
-        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
-                          self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
-        if should_flush {
-            ShareStorage::<BlockFound>::flush(self).await?;
-        }
+        info!("Storing found block immediately");
+        let mut batch_inserter = self.client.insert("blocks")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        let clickhouse_block = ClickhouseBlock::from(block);
+        batch_inserter.write(&clickhouse_block).await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        batch_inserter.end().await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        info!("Successfully stored found block");
         Ok(())
     }
 
