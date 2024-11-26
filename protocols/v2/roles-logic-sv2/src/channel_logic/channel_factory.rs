@@ -19,6 +19,7 @@ use std::{collections::HashMap, convert::TryInto, sync::Arc};
 use template_distribution_sv2::{NewTemplate, SetNewPrevHash as SetNewPrevHashFromTp};
 
 use tracing::{debug, error, info, trace, warn};
+use std::backtrace::Backtrace;
 
 use stratum_common::{
     bitcoin,
@@ -827,6 +828,29 @@ impl ChannelFactory {
         trace!("On checking target header is: {:?}", header);
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
+
+        // NOMIUM share_log injection ----
+        match self.kind {
+            ExtendedChannelKind::Pool => {
+                let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                    m.get_channel_id(),
+                    m.get_sequence_number(),
+                    m.get_job_id(),
+                    m.get_nonce(),
+                    m.get_n_time(),
+                    m.get_version(),
+                    hash,
+                    downstream_target.clone(),
+                    extranonce.to_vec()
+                );
+                info!("Calling share logging for POOL");
+                shares_logger::log_share(share_log);
+            },
+            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
+                info!("Skipping share logging for PROXY");
+            }
+        }
+        // ---- NOMIUM share_log injection ----
 
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
