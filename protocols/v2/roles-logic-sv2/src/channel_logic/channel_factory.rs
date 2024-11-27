@@ -30,7 +30,8 @@ use stratum_common::{
     },
 };
 
-/// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`) fields
+/// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`)
+/// fields
 #[derive(Debug)]
 pub struct PartialSetCustomMiningJob {
     pub version: u32,
@@ -239,9 +240,10 @@ impl ChannelFactory {
     /// Called when a `OpenExtendedMiningChannel` message is received.
     /// Here we save the downstream's target (based on hashrate) and the
     /// channel's extranonce details before returning the relevant SV2 mining messages
-    /// to be sent downstream. For the mining messages, we will first return an `OpenExtendedMiningChannelSuccess`
-    /// if the channel is successfully opened. Then we add the `NewExtendedMiningJob` and `SetNewPrevHash` messages if
-    /// the relevant data is available. If the channel opening fails, we return `OpenExtenedMiningChannelError`.
+    /// to be sent downstream. For the mining messages, we will first return an
+    /// `OpenExtendedMiningChannelSuccess` if the channel is successfully opened. Then we add
+    /// the `NewExtendedMiningJob` and `SetNewPrevHash` messages if the relevant data is
+    /// available. If the channel opening fails, we return `OpenExtenedMiningChannelError`.
     pub fn new_extended_channel(
         &mut self,
         request_id: u32,
@@ -251,9 +253,9 @@ impl ChannelFactory {
         let extended_channels_group = 0;
         let max_extranonce_size = self.extranonces.get_range2_len() as u16;
         if min_extranonce_size <= max_extranonce_size {
-            // SECURITY is very unlikely to finish the ids btw this unwrap could be used by an attaccher that
-            // want to dirsrupt the service maybe we should have a method to reuse ids that are no
-            // longer connected?
+            // SECURITY is very unlikely to finish the ids btw this unwrap could be used by an
+            // attaccher that want to dirsrupt the service maybe we should have a method
+            // to reuse ids that are no longer connected?
             let channel_id = self
                 .ids
                 .safe_lock(|ids| ids.new_channel_id(extended_channels_group))
@@ -456,8 +458,8 @@ impl ChannelFactory {
             .standard_channels_for_hom_downstreams
             .get(&channel_id)
             .unwrap();
-        // OPTIMIZATION this could be memoized somewhere cause is very likely that we will receive a lot od
-        // OpenStandardMiningChannel requests consequtevely
+        // OPTIMIZATION this could be memoized somewhere cause is very likely that we will receive a
+        // lot od OpenStandardMiningChannel requests consequtevely
         let job_id = self.job_ids.next();
         let future_jobs: Option<Vec<NewMiningJob<'static>>> = self
             .future_jobs
@@ -513,7 +515,8 @@ impl ChannelFactory {
                 result.push(Mining::SetNewPrevHash(prev_h.clone()));
                 Ok(())
             }
-            // If we have a prev hash and a last valid job we need to send new mining job before the prev hash
+            // If we have a prev hash and a last valid job we need to send new mining job before the
+            // prev hash
             (Some((prev_h, _)), Some(mut job), true) => {
                 let prev_h = prev_h.into_set_p_hash(channel_id, Some(job.job_id));
 
@@ -642,8 +645,9 @@ impl ChannelFactory {
         }
     }
 
-    /// Called when a new prev hash is received. If the respective job is available in the future job queue,
-    /// we move the future job into the valid job slot and store the prev hash as the current prev hash to be referenced.
+    /// Called when a new prev hash is received. If the respective job is available in the future
+    /// job queue, we move the future job into the valid job slot and store the prev hash as the
+    /// current prev hash to be referenced.
     fn on_new_prev_hash(&mut self, m: StagedPhash) -> Result<(), Error> {
         while let Some(mut job) = self.future_jobs.pop() {
             if job.0.job_id == m.job_id {
@@ -669,8 +673,8 @@ impl ChannelFactory {
         self.last_prev_hash = Some((m, ids));
         Ok(())
     }
-    /// Called when a `NewExtendedMiningJob` arrives. If the job is future, we add it to the future queue.
-    /// If the job is not future, we pair it with a the most recent prev hash
+    /// Called when a `NewExtendedMiningJob` arrives. If the job is future, we add it to the future
+    /// queue. If the job is not future, we pair it with a the most recent prev hash
     fn on_new_extended_mining_job(
         &mut self,
         m: NewExtendedMiningJob<'static>,
@@ -751,7 +755,8 @@ impl ChannelFactory {
 
     // If there is job creator, bitcoin_target is retrieved from there. If not, it is set to 0.
     // If there is a job creator we pass the correct template id. If not, we pass `None`
-    // allow comparison chain because clippy wants to make job management assertion into a match clause
+    // allow comparison chain because clippy wants to make job management assertion into a match
+    // clause
     #[allow(clippy::comparison_chain)]
     #[allow(clippy::too_many_arguments)]
     fn check_target<TxHash: std::convert::AsRef<[u8]>>(
@@ -1117,9 +1122,9 @@ impl PoolChannelFactory {
         )?;
         self.inner.on_new_extended_mining_job(new_job)
     }
-    /// Called when a `SubmitSharesStandard` message is received from the downstream. We check the shares
-    /// against the channel's respective target and return `OnNewShare` to let us know if and where the shares should
-    /// be relayed
+    /// Called when a `SubmitSharesStandard` message is received from the downstream. We check the
+    /// shares against the channel's respective target and return `OnNewShare` to let us know if
+    /// and where the shares should be relayed
     pub fn on_submit_shares_standard(
         &mut self,
         m: SubmitSharesStandard,
@@ -1175,9 +1180,9 @@ impl PoolChannelFactory {
         }
     }
 
-    /// Called when a `SubmitSharesExtended` message is received from the downstream. We check the shares
-    /// against the channel's respective target and return `OnNewShare` to let us know if and where the shares should
-    /// be relayed
+    /// Called when a `SubmitSharesExtended` message is received from the downstream. We check the
+    /// shares against the channel's respective target and return `OnNewShare` to let us know if
+    /// and where the shares should be relayed
     pub fn on_submit_shares_extended(
         &mut self,
         m: SubmitSharesExtended,
@@ -1258,7 +1263,8 @@ impl PoolChannelFactory {
             .unwrap();
         new_id
     }
-    /// Returns the full extranonce, extranonce1 (static for channel) + extranonce2 (miner nonce space)
+    /// Returns the full extranonce, extranonce1 (static for channel) + extranonce2 (miner nonce
+    /// space)
     pub fn extranonce_from_downstream_extranonce(
         &self,
         ext: mining_sv2::Extranonce,
@@ -1403,8 +1409,9 @@ impl ProxyExtendedChannelFactory {
         self.inner
             .new_extended_channel(request_id, hash_rate, min_extranonce_size)
     }
-    /// Called only when a new prev hash is received by a Template Provider when job declaration is used.
-    /// It matches the message with a `job_id`, creates a new custom job, and calls [`ChannelFactory::on_new_prev_hash`]
+    /// Called only when a new prev hash is received by a Template Provider when job declaration is
+    /// used. It matches the message with a `job_id`, creates a new custom job, and calls
+    /// [`ChannelFactory::on_new_prev_hash`]
     pub fn on_new_prev_hash_from_tp(
         &mut self,
         m: &SetNewPrevHashFromTp<'static>,
@@ -1445,8 +1452,9 @@ impl ProxyExtendedChannelFactory {
             panic!("A channel factory without job creator do not have declaration capabilities")
         }
     }
-    /// Called only when a new template is received by a Template Provider when job declaration is used.
-    /// It creates a new custom job and calls [`ChannelFactory::on_new_extended_mining_job`]
+    /// Called only when a new template is received by a Template Provider when job declaration is
+    /// used. It creates a new custom job and calls
+    /// [`ChannelFactory::on_new_extended_mining_job`]
     #[allow(clippy::type_complexity)]
     pub fn on_new_template(
         &mut self,
@@ -1510,9 +1518,9 @@ impl ProxyExtendedChannelFactory {
         }
     }
 
-    /// Called when a `SubmitSharesStandard` message is received from the downstream. We check the shares
-    /// against the channel's respective target and return `OnNewShare` to let us know if and where the the
-    /// shares should be relayed
+    /// Called when a `SubmitSharesStandard` message is received from the downstream. We check the
+    /// shares against the channel's respective target and return `OnNewShare` to let us know if
+    /// and where the the shares should be relayed
     pub fn on_submit_shares_extended(
         &mut self,
         m: SubmitSharesExtended<'static>,
@@ -1603,9 +1611,9 @@ impl ProxyExtendedChannelFactory {
         }
     }
 
-    /// Called when a `SubmitSharesStandard` message is received from the Downstream. We check the shares
-    /// against the channel's respective target and return `OnNewShare` to let us know if and where the shares should
-    /// be relayed
+    /// Called when a `SubmitSharesStandard` message is received from the Downstream. We check the
+    /// shares against the channel's respective target and return `OnNewShare` to let us know if
+    /// and where the shares should be relayed
     pub fn on_submit_shares_standard(
         &mut self,
         m: SubmitSharesStandard,
@@ -1668,8 +1676,8 @@ impl ProxyExtendedChannelFactory {
                         .ok_or(Error::ShareDoNotMatchAnyJob)?
                         .0
                         .nbits;
-                    // if there is not job_creator is not proxy duty to check if target is below or above
-                    // bitcoin target so we set bitcoin_target = 0.
+                    // if there is not job_creator is not proxy duty to check if target is below or
+                    // above bitcoin target so we set bitcoin_target = 0.
                     self.inner.check_target(
                         Share::Standard((m, *g_id)),
                         bitcoin_target.into(),
@@ -1720,7 +1728,8 @@ impl ProxyExtendedChannelFactory {
     pub fn last_valid_job_version(&self) -> Option<u32> {
         self.inner.last_valid_job.as_ref().map(|j| j.0.version)
     }
-    /// Returns the full extranonce, extranonce1 (static for channel) + extranonce2 (miner nonce space)
+    /// Returns the full extranonce, extranonce1 (static for channel) + extranonce2 (miner nonce
+    /// space)
     pub fn extranonce_from_downstream_extranonce(
         &self,
         ext: mining_sv2::Extranonce,
