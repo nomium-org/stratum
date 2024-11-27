@@ -6,6 +6,7 @@ use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -39,50 +40,13 @@ impl ClickhouseStorage {
 
     async fn ensure_table_exists(&self) -> Result<(), ClickhouseError> {
         info!("Checking existence of shares table");
-        
-        let create_table_query = r#"
-            CREATE TABLE IF NOT EXISTS shares (
-                channel_id UInt32,
-                sequence_number UInt32,
-                job_id UInt32,
-                nonce UInt32,
-                ntime UInt32,
-                version UInt32,
-                hash String,
-                share_status UInt8,
-                extranonce String,
-                difficulty Float64,
-                timestamp DateTime64(3) DEFAULT now64(3)
-            ) ENGINE = MergeTree()
-            PARTITION BY toYYYYMMDD(timestamp)
-            PRIMARY KEY (channel_id, timestamp)
-            ORDER BY (channel_id, timestamp, sequence_number)
-            SETTINGS index_granularity = 8192
-        "#;
 
-        self.client.query(create_table_query)
+        self.client.query(CREATE_SHARES_TABLE)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create shares table: {}", e)))?;
 
-        let create_mv_query = r#"
-            CREATE MATERIALIZED VIEW IF NOT EXISTS mv_hash_rate_stats
-            ENGINE = SummingMergeTree()
-            PARTITION BY toYYYYMMDD(period_start)
-            ORDER BY (channel_id, period_start)
-            AS
-            SELECT
-                channel_id,
-                toStartOfMinute(timestamp) as period_start,
-                count() as share_count,
-                sum(difficulty * pow(2, 32)) as total_hashes,
-                min(timestamp) as min_timestamp,
-                max(timestamp) as max_timestamp
-            FROM shares
-            GROUP BY channel_id, period_start
-        "#;
-
-        self.client.query(create_mv_query)
+        self.client.query(CREATE_HASHRATE_VIEW)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
@@ -110,17 +74,8 @@ impl ClickhouseBlockStorage {
 
     async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
         info!("Checking existence of blocks table");
-        let create_table_query = r#"
-            CREATE TABLE IF NOT EXISTS blocks (
-                channel_id UInt32,
-                block_hash String,
-                timestamp UInt64,
-                found_at DateTime64(3) DEFAULT now64(3)
-            ) ENGINE = MergeTree()
-            ORDER BY (channel_id, timestamp)
-            SETTINGS index_granularity = 8192
-        "#;
-        self.client.query(create_table_query)
+
+        self.client.query(CREATE_BLOCKS_TABLE)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
