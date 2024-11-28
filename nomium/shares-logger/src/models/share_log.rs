@@ -76,4 +76,6 @@ impl ShareData for ShareLog {
             ("difficulty".to_string(), self.difficulty.to_string()),
         ]
     }
+
+    fn is_block_found(&self) -> bool { false }
 }

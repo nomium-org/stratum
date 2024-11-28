@@ -26,4 +26,6 @@ impl ShareData for BlockFound {
             ("timestamp".to_string(), self.timestamp.to_string()),
         ]
     }
+
+    fn is_block_found(&self) -> bool { true }
 }

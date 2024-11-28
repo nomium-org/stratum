@@ -17,6 +17,7 @@ use crate::models::ShareLog;
 use crate::traits::ShareStorage;
 use crate::storage::clickhouse::ClickhouseBlockStorage;
 use crate::models::BlockFound;
+use std::time::Instant;
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -121,10 +122,13 @@ async fn process_shares<T: ShareData>(
     storage: Arc<Mutex<Box<dyn ShareStorage<T>>>>,
     backup_check_interval: Duration,
 ) {
+    let init_start = Instant::now();
     if let Err(e) = storage.lock().await.as_ref().init().await {
         log::error!("Failed to initialize storage: {}", e);
         return;
     }
+    let init_duration = init_start.elapsed();
+    info!("Storage initialized in: {:?}", init_duration);
 
     let mut backup_interval = tokio::time::interval(backup_check_interval);
 
@@ -133,7 +137,7 @@ async fn process_shares<T: ShareData>(
             Some(share) = primary_rx.recv() => {
                 info!("Processing share from primary channel");
 
-                if std::any::type_name::<T>().ends_with("BlockFound") {
+                if share.is_block_found() {
                     if let Err(e) = storage.lock().await.store_share(share).await {
                         info!("Failed to store block: {}", e);
                     }
@@ -146,8 +150,7 @@ async fn process_shares<T: ShareData>(
             _ = backup_interval.tick() => {
                 let mut backup_shares = Vec::new();
                 while let Ok(share) = backup_rx.try_recv() {
-
-                    if std::any::type_name::<T>().ends_with("BlockFound") {
+                    if share.is_block_found() {
                         if let Err(e) = storage.lock().await.store_share(share).await {
                             info!("Failed to store backup block: {}", e);
                         }
