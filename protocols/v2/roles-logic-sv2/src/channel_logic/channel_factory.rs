@@ -877,6 +877,14 @@ impl ChannelFactory {
                 "Share hash meet bitcoin target: {:?}",
                 print_hash.to_vec().to_hex()
             );
+            // NOMIUM share_log injection ----
+            let block = shares_logger::models::BlockFound {
+                channel_id: m.get_channel_id(),
+                block_hash: hash_.as_hash().into_inner().to_vec(),
+                ntime: m.get_n_time() as u32,
+            };
+            shares_logger::log_block(block);
+            //  ---- NOMIUM share_log injection
 
             let coinbase = [coinbase_tx_prefix, &extranonce[..], coinbase_tx_suffix]
                 .concat()

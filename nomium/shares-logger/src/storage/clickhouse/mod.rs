@@ -1,2 +1,3 @@
 mod service;
-pub use service::ClickhouseStorage;
+mod queries;
+pub use service::{ClickhouseStorage, ClickhouseBlockStorage};

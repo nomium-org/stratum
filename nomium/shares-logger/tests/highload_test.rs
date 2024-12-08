@@ -4,9 +4,11 @@ use common::mock_storage::MockStorageHighload;
 use shares_logger::{ShareLoggerBuilder, models::ShareLog, models::ShareStatus};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
+use shares_logger::traits::ShareStorage;
 
 #[tokio::test]
 async fn test_highload_share_processing() {
+    // cargo test test_highload_share_processing -- --nocapture
     println!("\n=== Starting highload test ===");
     let start_time = Instant::now();
     

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use shares_logger::traits::ShareStorage;
 use shares_logger::models::ShareLog;
 use shares_logger::errors::ClickhouseError;
+use shares_logger::traits::ShareData;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -25,7 +26,7 @@ impl MockStorageHighload {
 }
 
 #[async_trait]
-impl ShareStorage for MockStorageHighload {
+impl ShareStorage<ShareLog> for MockStorageHighload {
     async fn init(&self) -> Result<(), ClickhouseError> {
         Ok(())
     }

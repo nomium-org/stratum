@@ -11,35 +11,44 @@ Shares Logger handles the collection, processing and storage of mining share sub
 ```
 shares-logger/
 ├── src/
-│   ├── config/
-│   │   ├── mod.rs           # Configuration module exports
-│   │   ├── settings.rs      # Configuration implementation 
-│   │   └── default_config.toml  # Default configuration values
-│   ├── errors/
-│   │   ├── mod.rs           # Error types module exports
-│   │   └── clickhouse.rs    # ClickHouse-specific error types
-│   ├── models/
-│   │   ├── mod.rs           # Models module exports
-│   │   ├── share_log.rs     # Share logging data structure
-│   │   └── clickhouse_share.rs  # ClickHouse-specific share model
-│   ├── services/
-│   │   ├── mod.rs           # Services module exports
-│   │   ├── difficulty.rs    # Mining difficulty calculations
-│   │   └── share_processor.rs    # Share data processing logic
-│   ├── storage/
-│   │   ├── mod.rs           # Storage module exports
-│   │   └── clickhouse/      # ClickHouse storage implementation
-│   │       ├── mod.rs       # ClickHouse module exports
-│   │       └── service.rs   # ClickHouse storage service implementation with batching and flush logic
-│   ├── traits/
-│   │   ├── mod.rs           # Traits module exports
-│   │   └── storage.rs       # Storage trait definitions
-│   └── lib.rs               # Library root and share logging implementation
+│ ├── config/
+│ │ ├── mod.rs # Configuration module exports
+│ │ ├── settings.rs # Configuration implementation
+│ │ └── default_config.toml # Default configuration values
+│ ├── errors/
+│ │ ├── mod.rs # Error types module exports
+│ │ └── clickhouse.rs # ClickHouse-specific error types
+│ ├── models/
+│ │ ├── mod.rs # Models module exports
+│ │ ├── share_log.rs # Share logging data structure
+│ │ ├── block_found.rs # Block found data structure
+│ │ ├── clickhouse_share.rs # ClickHouse-specific share model
+│ │ └── clickhouse_block.rs # ClickHouse-specific block model
+│ ├── services/
+│ │ ├── mod.rs # Services module exports
+│ │ ├── difficulty.rs # Mining difficulty calculations
+│ │ └── share_processor.rs # Share data processing logic
+│ ├── storage/
+│ │ ├── mod.rs # Storage module exports
+│ │ └── clickhouse/ # ClickHouse storage implementation
+│ │ ├── mod.rs # ClickHouse module exports
+│ │ ├── service.rs # ClickHouse storage services implementation
+│ │ └── queries/ # SQL queries for table creation
+│ │ │ ├── mod.rs # Queries module exports
+│ │ │ ├── shares_table.sql # Shares table schema
+│ │ │ ├── blocks_table.sql # Blocks table schema
+│ │ │ └── hashrate_view.sql # Hashrate view definition
+│ ├── traits/
+│ │ ├── mod.rs # Traits module exports
+│ │ ├── storage.rs # Storage trait definitions
+│ │ └── share_data.rs # Share data trait definitions
+│ └── lib.rs # Library root and share logging implementation
 ├── tests/
-│   ├── common/
-│   │   ├── mod.rs           # Test utilities module exports
-│   │   └── mock_storage.rs  # Mock storage for testing
-│   └── highload_test.rs     # High-load testing scenarios
+│ ├── common/
+│ │ ├── mod.rs # Test utilities module exports
+│ │ └── mock_storage.rs # Mock storage for testing
+│ ├── highload_test.rs # High-load testing scenarios
+│ └── share_types_test.rs # Share types testing
 └── Cargo.toml
 ```
 
@@ -50,6 +59,13 @@ shares-logger/
 - ClickHouse database integration
 - Mining difficulty calculations
 - Debug logging capabilities
+
+### Block storage features:
+
+- Immediate block logging without batching
+- Separate storage implementation for blocks
+
+
 
 ## Usage
 

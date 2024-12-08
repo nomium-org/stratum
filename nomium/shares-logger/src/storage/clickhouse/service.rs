@@ -1,16 +1,24 @@
 use async_trait::async_trait;
 use crate::traits::ShareStorage;
+use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock}; 
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
-use crate::models::{ShareLog, ClickhouseShare};
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
     client: Client,
     batch: Vec<ShareLog>,
+    last_flush: std::time::Instant,
+}
+
+#[derive(Clone)]
+pub struct ClickhouseBlockStorage {
+    client: Client,
+    batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
 }
 
@@ -32,50 +40,13 @@ impl ClickhouseStorage {
 
     async fn ensure_table_exists(&self) -> Result<(), ClickhouseError> {
         info!("Checking existence of shares table");
-        
-        let create_table_query = r#"
-            CREATE TABLE IF NOT EXISTS shares (
-                channel_id UInt32,
-                sequence_number UInt32,
-                job_id UInt32,
-                nonce UInt32,
-                ntime UInt32,
-                version UInt32,
-                hash String,
-                share_status UInt8,
-                extranonce String,
-                difficulty Float64,
-                timestamp DateTime64(3) DEFAULT now64(3)
-            ) ENGINE = MergeTree()
-            PARTITION BY toYYYYMMDD(timestamp)
-            PRIMARY KEY (channel_id, timestamp)
-            ORDER BY (channel_id, timestamp, sequence_number)
-            SETTINGS index_granularity = 8192
-        "#;
 
-        self.client.query(create_table_query)
+        self.client.query(CREATE_SHARES_TABLE)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create shares table: {}", e)))?;
 
-        let create_mv_query = r#"
-            CREATE MATERIALIZED VIEW IF NOT EXISTS mv_hash_rate_stats
-            ENGINE = SummingMergeTree()
-            PARTITION BY toYYYYMMDD(period_start)
-            ORDER BY (channel_id, period_start)
-            AS
-            SELECT
-                channel_id,
-                toStartOfMinute(timestamp) as period_start,
-                count() as share_count,
-                sum(difficulty * pow(2, 32)) as total_hashes,
-                min(timestamp) as min_timestamp,
-                max(timestamp) as max_timestamp
-            FROM shares
-            GROUP BY channel_id, period_start
-        "#;
-
-        self.client.query(create_mv_query)
+        self.client.query(CREATE_HASHRATE_VIEW)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
@@ -85,27 +56,53 @@ impl ClickhouseStorage {
     }
 }
 
+impl ClickhouseBlockStorage {
+    pub fn new() -> Result<Self, ClickhouseError> {
+        info!("Initializing ClickhouseBlockStorage...");
+        let client = Client::default()
+            .with_url(&SETTINGS.clickhouse.url)
+            .with_database(&SETTINGS.clickhouse.database)
+            .with_user(&SETTINGS.clickhouse.username)
+            .with_password(&SETTINGS.clickhouse.password);
+
+        Ok(Self {
+            client,
+            batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
+            last_flush: std::time::Instant::now(),
+        })
+    }
+
+    async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
+        info!("Checking existence of blocks table");
+
+        self.client.query(CREATE_BLOCKS_TABLE)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
+        info!("Blocks table created or already exists");
+        Ok(())
+    }
+}
+
 #[async_trait]
-impl ShareStorage for ClickhouseStorage {
+impl ShareStorage<ShareLog> for ClickhouseStorage {
     async fn init(&self) -> Result<(), ClickhouseError> {
         self.ensure_table_exists().await
     }
 
     async fn store_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
         self.batch.push(share);
-        
         let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
                           self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
-        
         if should_flush {
-            self.flush().await?;
+            ShareStorage::<ShareLog>::flush(self).await?;
         }
         Ok(())
     }
 
     async fn store_batch(&mut self, shares: Vec<ShareLog>) -> Result<(), ClickhouseError> {
         for share in shares {
-            self.store_share(share).await?;
+            ShareStorage::<ShareLog>::store_share(self, share).await?;
         }
         Ok(())
     }
@@ -129,10 +126,64 @@ impl ShareStorage for ClickhouseStorage {
 
         batch_inserter.end().await
             .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-        
+
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} records", batch_size);
-        
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
+    async fn init(&self) -> Result<(), ClickhouseError> {
+        self.ensure_blocks_table_exists().await
+    }
+
+    async fn store_share(&mut self, block: BlockFound) -> Result<(), ClickhouseError> {
+        info!("Storing found block immediately");
+        let mut batch_inserter = self.client.insert("blocks")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        let clickhouse_block = ClickhouseBlock::from(block);
+        batch_inserter.write(&clickhouse_block).await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        batch_inserter.end().await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+            
+        info!("Successfully stored found block");
+        Ok(())
+    }
+
+    async fn store_batch(&mut self, blocks: Vec<BlockFound>) -> Result<(), ClickhouseError> {
+        for block in blocks {
+            ShareStorage::<BlockFound>::store_share(self, block).await?;
+        }
+        Ok(())
+    }
+
+    async fn flush(&mut self) -> Result<(), ClickhouseError> {
+        if self.batch.is_empty() {
+            return Ok(());
+        }
+
+        let batch_size = self.batch.len();
+        info!("Flushing batch of {} block records", batch_size);
+
+        let mut batch_inserter = self.client.insert("blocks")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+
+        for block in self.batch.drain(..) {
+            let clickhouse_block = ClickhouseBlock::from(block);
+            batch_inserter.write(&clickhouse_block).await
+                .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        }
+
+        batch_inserter.end().await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+
+        self.last_flush = std::time::Instant::now();
+        info!("Successfully flushed {} block records", batch_size);
         Ok(())
     }
 }
