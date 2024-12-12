@@ -90,6 +90,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
+                        user_identity: "into_extended_hardcode".to_string().try_into().unwrap(),
                     };
                     *self = Self::SendSubmitShareUpstream((Share::Extended(share), *template_id));
                 }
@@ -106,6 +107,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
+                        user_identity: "into_extended_hardcode".to_string().try_into().unwrap(),
                     };
                     *self = Self::ShareMeetBitcoinTarget((
                         Share::Extended(share),
@@ -1184,6 +1186,12 @@ impl PoolChannelFactory {
         &mut self,
         m: SubmitSharesExtended,
     ) -> Result<OnNewShare, Error> {
+        //
+        info!(
+            "on_submit_shares_extended(): {}",
+            std::str::from_utf8(m.user_identity.as_ref()).unwrap_or("invalid utf8")
+        );
+        //
         let target = self.job_creator.last_target();
         // When downstream set a custom mining job we add the job to the negotiated job
         // hashmap, with the extended channel id as a key. Whenever the pool receive a share must

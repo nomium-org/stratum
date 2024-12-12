@@ -299,6 +299,7 @@ impl Bridge {
         };
         let mining_device_extranonce: Vec<u8> = sv1_submit.extra_nonce2.into();
         let extranonce2 = mining_device_extranonce;
+        let user_identity = "nomium_test_worker".to_string().try_into()?;
         Ok(SubmitSharesExtended {
             channel_id,
             // I put 0 below cause sequence_number is not what should be TODO
@@ -308,6 +309,7 @@ impl Bridge {
             ntime: sv1_submit.time.0,
             version,
             extranonce: extranonce2.try_into()?,
+            user_identity,
         })
     }
 
