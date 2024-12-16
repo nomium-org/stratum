@@ -37,6 +37,7 @@ impl ShareProcessor {
             status,
             extranonce,
             difficulty,
+            user_identity,
         )
     }
 }
