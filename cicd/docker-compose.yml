@@ -7,6 +7,8 @@ services:
           - CLICKHOUSE_USER=${CLICKHOUSE_USER}
           - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
         restart: always
+        ports:
+          - 8123:8123
         network_mode: host
     
     pool:
