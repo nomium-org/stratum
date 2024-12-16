@@ -832,6 +832,12 @@ impl ChannelFactory {
         let hash = hash_.as_hash().into_inner();
 
         // NOMIUM share_log injection ----
+        let user_identity = match &m {
+            Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
+                .unwrap_or("invalid_utf8")
+                .to_string(),
+            Share::Standard(_) => panic!("Expected Extended share, got Standard"),
+        };
         match self.kind {
             ExtendedChannelKind::Pool => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
@@ -843,7 +849,8 @@ impl ChannelFactory {
                     m.get_version(),
                     hash,
                     downstream_target.clone(),
-                    extranonce.to_vec()
+                    extranonce.to_vec(),
+                    user_identity,
                 );
                 info!("Calling share logging for POOL");
                 shares_logger::log_share(share_log);
