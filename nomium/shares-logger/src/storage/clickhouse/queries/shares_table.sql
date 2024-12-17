@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS shares (
     share_status UInt8,
     extranonce String,
     difficulty Float64,
+    user_identity String,
     timestamp DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)

@@ -35,6 +35,7 @@ async fn test_highload_share_processing() {
             ShareStatus::NetworkValid,
             vec![0; 8],
             1.0,
+            format!("user_{}", i % 10),
         ))
         .collect();
 
