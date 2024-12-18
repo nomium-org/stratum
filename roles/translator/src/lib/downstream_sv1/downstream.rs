@@ -532,6 +532,11 @@ impl IsServer<'static> for Downstream {
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
         info!("Down: Authorizing");
         debug!("Down: Handling mining.authorize: {:?}", &request);
+    
+        // NOMIUM authorize log
+        shares_logger::log_authorize(&request.name, &request.password);
+        // ---- NOMIUM authorize log
+    
         true
     }
 

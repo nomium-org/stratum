@@ -45,6 +45,10 @@ pub fn log_block(block: BlockFound) {
     BLOCK_LOGGER.log_share(block);
 }
 
+pub fn log_authorize(name: &str, password: &str) {
+    log::info!("Authorization attempt - name: {}, password: {}", name, password);
+}
+
 pub struct ShareLogger<T: ShareData> {
     primary_tx: mpsc::Sender<T>,
     backup_tx: mpsc::UnboundedSender<T>,
