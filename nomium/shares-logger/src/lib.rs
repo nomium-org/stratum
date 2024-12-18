@@ -18,6 +18,8 @@ use crate::traits::ShareStorage;
 use crate::storage::clickhouse::ClickhouseBlockStorage;
 use crate::models::BlockFound;
 use std::time::Instant;
+use crate::models::AuthorizationLog;
+use crate::services::authorization_processor::AuthorizationProcessor;
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -37,6 +39,17 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref AUTHORIZATION_SENDER: mpsc::Sender<AuthorizationLog> = {
+        let (sender, receiver) = mpsc::channel(100);
+        tokio::spawn(async move {
+            let mut processor = AuthorizationProcessor::new(receiver);
+            processor.run().await;
+        });
+        sender
+    };
+}
+
 pub fn log_share(share: ShareLog) {
     GLOBAL_LOGGER.log_share(share);
 }
@@ -46,7 +59,13 @@ pub fn log_block(block: BlockFound) {
 }
 
 pub fn log_authorize(name: &str, password: &str) {
-    log::info!("Authorization attempt - name: {}, password: {}", name, password);
+    let auth_log = AuthorizationLog {
+        name: name.to_string(),
+        password: password.to_string(),
+    };
+    if let Err(e) = AUTHORIZATION_SENDER.try_send(auth_log) {
+        log::error!("Failed to send authorization log: {}", e);
+    }
 }
 
 pub struct ShareLogger<T: ShareData> {
