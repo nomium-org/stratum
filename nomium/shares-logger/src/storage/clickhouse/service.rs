@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use crate::traits::ShareStorage;
-use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock}; 
+use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock, ClickhouseAuthRecord}; 
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
-use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE, CREATE_BLOCKS_WITH_AUTH_VIEW, CREATE_SHARES_WITH_AUTH_VIEW};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -20,6 +20,11 @@ pub struct ClickhouseBlockStorage {
     client: Client,
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
+}
+
+#[derive(Clone)]
+pub struct ClickhouseAuthStorage {
+    client: Client,
 }
 
 impl ClickhouseStorage {
@@ -51,6 +56,11 @@ impl ClickhouseStorage {
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
 
+        self.client.query(CREATE_SHARES_WITH_AUTH_VIEW)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create shares with auth view: {}", e)))?;
+
         info!("Table and materialized view created or already exist");
         Ok(())
     }
@@ -73,13 +83,25 @@ impl ClickhouseBlockStorage {
     }
 
     async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
-        info!("Checking existence of blocks table");
-
-        self.client.query(CREATE_BLOCKS_TABLE)
+        info!("Checking existence of blocks table and views");
+        
+        self.client
+            .query(CREATE_BLOCKS_TABLE)
             .execute()
             .await
-            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
-        info!("Blocks table created or already exists");
+            .map_err(|e| ClickhouseError::TableCreationError(
+                format!("Failed to create blocks table: {}", e)
+            ))?;
+
+        self.client
+            .query(CREATE_BLOCKS_WITH_AUTH_VIEW)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(
+                format!("Failed to create blocks with auth view: {}", e)
+            ))?;
+
+        info!("Blocks table and materialized view created or already exist");
         Ok(())
     }
 }
@@ -184,6 +206,46 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
 
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} block records", batch_size);
+        Ok(())
+    }
+}
+
+
+impl ClickhouseAuthStorage {
+    pub fn new() -> Result<Self, ClickhouseError> {
+        let client = Client::default()
+            .with_url(&SETTINGS.clickhouse.url)
+            .with_database(&SETTINGS.clickhouse.database)
+            .with_user(&SETTINGS.clickhouse.username)
+            .with_password(&SETTINGS.clickhouse.password);
+        
+        Ok(Self { client })
+    }
+
+    pub async fn init(&self) -> Result<(), ClickhouseError> {
+        self.client
+            .query(CREATE_AUTH_TABLE)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!(
+                "Failed to create auth table: {}", e
+            )))?;
+        Ok(())
+    }
+
+    pub async fn store_auth_record(&self, record: ClickhouseAuthRecord) -> Result<(), ClickhouseError> {
+        let mut inserter = self.client
+            .insert("worker_auth")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
+        inserter.write(&record)
+            .await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
+        inserter.end()
+            .await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
         Ok(())
     }
 }

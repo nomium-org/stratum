@@ -14,6 +14,7 @@ pub struct ShareLog {
     pub share_status: ShareStatus,
     pub extranonce: Vec<u8>,
     pub difficulty: f64,
+    pub user_identity: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -36,6 +37,7 @@ impl ShareLog {
         share_status: ShareStatus,
         extranonce: Vec<u8>,
         difficulty: f64,
+        user_identity: String,
     ) -> Self {
         Self {
             channel_id,
@@ -47,7 +49,8 @@ impl ShareLog {
             hash,
             share_status,
             extranonce,
-            difficulty
+            difficulty,
+            user_identity,
         }
     }
 }
@@ -74,6 +77,7 @@ impl ShareData for ShareLog {
             ("share_status".to_string(), (self.share_status as u8).to_string()),
             ("extranonce".to_string(), hex::encode(&self.extranonce)),
             ("difficulty".to_string(), self.difficulty.to_string()),
+            ("user_identity".to_string(), self.user_identity.clone()),
         ]
     }
 
