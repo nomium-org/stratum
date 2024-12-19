@@ -6,7 +6,7 @@ use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
-use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE, CREATE_BLOCKS_WITH_AUTH_VIEW};
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE, CREATE_BLOCKS_WITH_AUTH_VIEW, CREATE_SHARES_WITH_AUTH_VIEW};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -55,6 +55,11 @@ impl ClickhouseStorage {
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
+
+        self.client.query(CREATE_SHARES_WITH_AUTH_VIEW)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create shares with auth view: {}", e)))?;
 
         info!("Table and materialized view created or already exist");
         Ok(())
