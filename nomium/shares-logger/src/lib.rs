@@ -20,6 +20,10 @@ use crate::models::BlockFound;
 use std::time::Instant;
 use crate::models::AuthorizationLog;
 use crate::services::authorization_processor::AuthorizationProcessor;
+use crate::services::external_api::ExternalApiService;
+
+const API_BASE_URL: &str = "https://qa.redrockpool.com/equipment-api/v1";
+const API_KEY: &str = "ZcU8z5W87ufe";
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -42,8 +46,9 @@ lazy_static! {
 lazy_static! {
     static ref AUTHORIZATION_SENDER: mpsc::Sender<AuthorizationLog> = {
         let (sender, receiver) = mpsc::channel(100);
+        let api_service = ExternalApiService::new(API_KEY, API_BASE_URL);
         tokio::spawn(async move {
-            let mut processor = AuthorizationProcessor::new(receiver);
+            let mut processor = AuthorizationProcessor::new(receiver, api_service);
             processor.run().await;
         });
         sender
