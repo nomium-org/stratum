@@ -10,13 +10,14 @@ pub struct WorkerAuthenticationRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct WorkerAuthenticationResponse {
-    isSuccess: bool,
-    workerId: String,
-    workerName: String,
-    userId: String,
-    accountId: String,
+    pub isSuccess: bool,
+    pub workerId: String,
+    pub workerName: String,
+    pub userId: String,
+    pub accountId: String,
 }
 
+#[derive(Clone)]
 pub struct ExternalApiService {
     client: Client,
     api_key: String,
@@ -36,7 +37,7 @@ impl ExternalApiService {
         &self,
         account_name: &str,
         worker_number: u32,
-    ) -> Result<WorkerAuthenticationResponse, Box<dyn std::error::Error>> {
+    ) -> Result<WorkerAuthenticationResponse, Box<dyn std::error::Error + Send + Sync>> {
         let request_body = WorkerAuthenticationRequest {
             accountName: account_name.to_string(),
             workerNumber: worker_number,

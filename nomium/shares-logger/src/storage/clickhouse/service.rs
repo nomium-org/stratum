@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use crate::traits::ShareStorage;
-use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock}; 
+use crate::models::{ShareLog, BlockFound, ClickhouseShare, ClickhouseBlock, ClickhouseAuthRecord}; 
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
-use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -20,6 +20,11 @@ pub struct ClickhouseBlockStorage {
     client: Client,
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
+}
+
+#[derive(Clone)]
+pub struct ClickhouseAuthStorage {
+    client: Client,
 }
 
 impl ClickhouseStorage {
@@ -184,6 +189,46 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
 
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} block records", batch_size);
+        Ok(())
+    }
+}
+
+
+impl ClickhouseAuthStorage {
+    pub fn new() -> Result<Self, ClickhouseError> {
+        let client = Client::default()
+            .with_url(&SETTINGS.clickhouse.url)
+            .with_database(&SETTINGS.clickhouse.database)
+            .with_user(&SETTINGS.clickhouse.username)
+            .with_password(&SETTINGS.clickhouse.password);
+        
+        Ok(Self { client })
+    }
+
+    pub async fn init(&self) -> Result<(), ClickhouseError> {
+        self.client
+            .query(CREATE_AUTH_TABLE)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(format!(
+                "Failed to create auth table: {}", e
+            )))?;
+        Ok(())
+    }
+
+    pub async fn store_auth_record(&self, record: ClickhouseAuthRecord) -> Result<(), ClickhouseError> {
+        let mut inserter = self.client
+            .insert("worker_auth")
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
+        inserter.write(&record)
+            .await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
+        inserter.end()
+            .await
+            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        
         Ok(())
     }
 }

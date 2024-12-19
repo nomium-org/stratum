@@ -21,6 +21,7 @@ use std::time::Instant;
 use crate::models::AuthorizationLog;
 use crate::services::authorization_processor::AuthorizationProcessor;
 use crate::services::external_api::ExternalApiService;
+use anyhow::Error;
 
 const API_BASE_URL: &str = "https://qa.redrockpool.com/equipment-api/v1";
 const API_KEY: &str = "ZcU8z5W87ufe";
@@ -49,7 +50,9 @@ lazy_static! {
         let api_service = ExternalApiService::new(API_KEY, API_BASE_URL);
         tokio::spawn(async move {
             let mut processor = AuthorizationProcessor::new(receiver, api_service);
-            processor.run().await;
+            if let Err(e) = processor.run().await {
+                log::error!("Authorization processor error: {}", e);
+            }
         });
         sender
     };

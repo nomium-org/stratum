@@ -1,25 +1,41 @@
 use crate::models::AuthorizationLog;
 use crate::services::external_api::ExternalApiService;
+use crate::storage::clickhouse::ClickhouseAuthStorage;
+use crate::models::ClickhouseAuthRecord;
 use tokio::sync::mpsc;
-use log::info;
+use log::{info, error};
+use anyhow::Error;
 
 pub struct AuthorizationProcessor {
     receiver: mpsc::Receiver<AuthorizationLog>,
     api_service: ExternalApiService,
+    storage: ClickhouseAuthStorage,
 }
 
 impl AuthorizationProcessor {
-    pub fn new(receiver: mpsc::Receiver<AuthorizationLog>, api_service: ExternalApiService) -> Self {
-        Self { receiver, api_service }
+    pub fn new(
+        receiver: mpsc::Receiver<AuthorizationLog>, 
+        api_service: ExternalApiService,
+    ) -> Self {
+        let storage = ClickhouseAuthStorage::new()
+            .expect("Failed to create ClickHouse auth storage");
+        Self { 
+            receiver, 
+            api_service,
+            storage,
+        }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> Result<(), Error> {
+        if let Err(e) = self.storage.init().await {
+            return Err(Error::new(e));
+        }
         while let Some(auth_log) = self.receiver.recv().await {
             info!(
                 "Processing authorization: name = {}, password = {}",
                 auth_log.name, auth_log.password
             );
-
+            
             if let Some((account_name, worker_number)) = Self::parse_name(&auth_log.name) {
                 match self
                     .api_service
@@ -28,15 +44,28 @@ impl AuthorizationProcessor {
                 {
                     Ok(response) => {
                         info!("API Response: {:?}", response);
+                        let record = ClickhouseAuthRecord::new(
+                            account_name,
+                            worker_number,
+                            response.isSuccess,
+                            response.workerId,
+                            response.workerName,
+                            response.userId,
+                            response.accountId,
+                        );
+                        if let Err(e) = self.storage.store_auth_record(record).await {
+                            error!("Failed to store auth record: {}", e);
+                        }
                     }
                     Err(err) => {
-                        info!("API Request failed: {:?}", err);
+                        error!("API Request failed: {:?}", err);
                     }
                 }
             } else {
-                info!("Failed to parse name: {}", auth_log.name);
+                error!("Failed to parse name: {}", auth_log.name);
             }
         }
+        Ok(())
     }
 
     fn parse_name(full_name: &str) -> Option<(String, u32)> {

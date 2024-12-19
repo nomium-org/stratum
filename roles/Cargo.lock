@@ -3019,6 +3019,7 @@ dependencies = [
 name = "shares-logger"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "clickhouse",
  "config 0.13.4",
