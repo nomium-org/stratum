@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS worker_auth (
     user_id String,
     account_id String,
     auth_time DateTime64(3) DEFAULT now64(3)
-) ENGINE = ReplacingMergeTree()
+) ENGINE = ReplacingMergeTree(auth_time)
+PRIMARY KEY (account_name, worker_number)
 ORDER BY (account_name, worker_number)
-SETTINGS index_granularity = 8192;
+SETTINGS index_granularity = 8192
