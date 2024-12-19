@@ -6,7 +6,7 @@ use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
 use std::time::Duration;
-use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE};
+use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_AUTH_TABLE, CREATE_BLOCKS_WITH_AUTH_VIEW};
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -78,13 +78,25 @@ impl ClickhouseBlockStorage {
     }
 
     async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
-        info!("Checking existence of blocks table");
-
-        self.client.query(CREATE_BLOCKS_TABLE)
+        info!("Checking existence of blocks table and views");
+        
+        self.client
+            .query(CREATE_BLOCKS_TABLE)
             .execute()
             .await
-            .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
-        info!("Blocks table created or already exists");
+            .map_err(|e| ClickhouseError::TableCreationError(
+                format!("Failed to create blocks table: {}", e)
+            ))?;
+
+        self.client
+            .query(CREATE_BLOCKS_WITH_AUTH_VIEW)
+            .execute()
+            .await
+            .map_err(|e| ClickhouseError::TableCreationError(
+                format!("Failed to create blocks with auth view: {}", e)
+            ))?;
+
+        info!("Blocks table and materialized view created or already exist");
         Ok(())
     }
 }
