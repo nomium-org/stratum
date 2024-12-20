@@ -530,9 +530,43 @@ impl IsServer<'static> for Downstream {
     /// large number of independent Mining Devices can be handled with a single SV1 connection.
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
-        info!("Down: Authorizing");
-        debug!("Down: Handling mining.authorize: {:?}", &request);
-        true
+        let worker_name = request.name.to_string();
+        
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                let client = reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_secs(5))
+                    .build()
+                    .unwrap();
+                    
+                let result = client
+                    .post("https://qa.redrockpool.com/equipment-api/v1/worker-authentication")
+                    .header("accept", "text/plain")
+                    .header("X-Api-Key", "ZcU8z5W87ufe")
+                    .header("Content-Type", "application/json")
+                    .json(&serde_json::json!({
+                        "accountName": worker_name.split('.').next().unwrap_or(""),
+                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("0").parse::<i32>().unwrap_or(0)
+                    }))
+                    .send()
+                    .await;
+    
+                match result {
+                    Ok(response) => {
+                        if let Ok(json) = response.json::<serde_json::Value>().await {
+                            info!("!!!!!!!!!!!!!!!!!!! Auth response: {:?}", json);
+                            json.get("isSuccess").and_then(|v| v.as_bool()).unwrap_or(false)
+                        } else {
+                            false
+                        }
+                    }
+                    Err(e) => {
+                        info!("Auth request failed: {:?}", e);
+                        false
+                    }
+                }
+            })
+        })
     }
 
     /// When miner find the job which meets requested difficulty, it can submit share to the server.
