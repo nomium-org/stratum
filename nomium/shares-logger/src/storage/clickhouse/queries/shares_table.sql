@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS shares (
     timestamp DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
-ORDER BY (user_identity, timestamp)
+ORDER BY (worker_id, timestamp, ntime)
 SETTINGS index_granularity = 8192;

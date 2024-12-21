@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS blocks (
     ntime UInt32,
     found_at DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
-ORDER BY (user_identity, ntime)
-SETTINGS index_granularity = 8192
+PARTITION BY toYYYYMMDD(found_at)
+ORDER BY (worker_id, found_at, ntime)
+SETTINGS index_granularity = 8192;
