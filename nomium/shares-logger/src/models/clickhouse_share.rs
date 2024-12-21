@@ -15,6 +15,7 @@ pub struct ClickhouseShare {
     pub extranonce: String,
     pub difficulty: f64,
     pub user_identity: String,
+    pub worker_id: String,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -44,6 +45,7 @@ impl From<ShareLog> for ClickhouseShare {
             extranonce: extranonce_hex,
             difficulty: share.difficulty,
             user_identity: share.user_identity,
+            worker_id: share.worker_id,
         }
     }
 }

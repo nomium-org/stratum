@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS shares (
     user_identity String,
+    worker_id String,
     sequence_number UInt32,
     job_id UInt32,
     nonce UInt32,

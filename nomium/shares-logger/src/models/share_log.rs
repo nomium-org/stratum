@@ -15,6 +15,7 @@ pub struct ShareLog {
     pub extranonce: Vec<u8>,
     pub difficulty: f64,
     pub user_identity: String,
+    pub worker_id: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -38,6 +39,7 @@ impl ShareLog {
         extranonce: Vec<u8>,
         difficulty: f64,
         user_identity: String,
+        worker_id: String,
     ) -> Self {
         Self {
             channel_id,
@@ -51,6 +53,7 @@ impl ShareLog {
             extranonce,
             difficulty,
             user_identity,
+            worker_id,
         }
     }
 }
