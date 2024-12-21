@@ -29,7 +29,7 @@ min_extranonce2_size = 8
 # min_individual_miner_hashrate=100_000.0
 min_individual_miner_hashrate=5_000_000.0
 # target number of shares per minute the miner should be sending
-shares_per_minute = 1.0
+shares_per_minute = 10.0
 
 [upstream_difficulty_config]
 # interval in seconds to elapse before updating channel hashrate with the pool

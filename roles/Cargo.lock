@@ -3454,6 +3454,7 @@ dependencies = [
  "key-utils",
  "network_helpers_sv2",
  "once_cell",
+ "parking_lot",
  "rand",
  "reqwest",
  "roles_logic_sv2",

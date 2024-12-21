@@ -299,10 +299,19 @@ impl Bridge {
         };
         let mining_device_extranonce: Vec<u8> = sv1_submit.extra_nonce2.into();
         let extranonce2 = mining_device_extranonce;
-        let user_identity = sv1_submit.user_name.try_into()?;
+
+        info!("!!!! FROM BRIDGE. Worker name: {}, Stored identity: {:?}", 
+            sv1_submit.user_name,
+            super::super::worker_name_store::get_worker_identity(&sv1_submit.user_name)
+        );
+        let user_identity = if let Some(identity) = super::super::worker_name_store::get_worker_identity(&sv1_submit.user_name) {
+            identity.to_string().try_into()?
+        } else {
+            sv1_submit.user_name.try_into()?
+        };
+    
         Ok(SubmitSharesExtended {
             channel_id,
-            // I put 0 below cause sequence_number is not what should be TODO
             sequence_number: 0,
             job_id: sv1_submit.job_id.parse::<u32>()?,
             nonce: sv1_submit.nonce.0,

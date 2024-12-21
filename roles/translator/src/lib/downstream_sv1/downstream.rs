@@ -4,6 +4,7 @@ use crate::{
     proxy_config::{DownstreamDifficultyConfig, UpstreamDifficultyConfig},
     status,
 };
+//use super::super::worker_name_store::{store_worker, get_worker_identity, WorkerIdentity};
 use async_channel::{bounded, Receiver, Sender};
 use async_std::{
     io::BufReader,
@@ -538,7 +539,7 @@ impl IsServer<'static> for Downstream {
                     .timeout(std::time::Duration::from_secs(5))
                     .build()
                     .unwrap();
-                    
+    
                 let result = client
                     .post("https://qa.redrockpool.com/equipment-api/v1/worker-authentication")
                     .header("accept", "text/plain")
@@ -554,14 +555,27 @@ impl IsServer<'static> for Downstream {
                 match result {
                     Ok(response) => {
                         if let Ok(json) = response.json::<serde_json::Value>().await {
-                            info!("!!!!!!!!!!!!!!!!!!! Auth response: {:?}", json);
-                            json.get("isSuccess").and_then(|v| v.as_bool()).unwrap_or(false)
-                        } else {
-                            false
+                            if let Some(is_success) = json.get("isSuccess").and_then(|v| v.as_bool()) {
+                                if is_success {
+                                    if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
+
+                                        super::super::worker_name_store::store_worker(
+                                            worker_name.clone(), 
+                                            worker_id.to_string()
+                                        );
+                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}", 
+                                            worker_name,
+                                            super::super::worker_name_store::get_worker_identity(&worker_name)
+                                        );
+                                        return true;
+                                    }
+                                }
+                            }
                         }
+                        false
                     }
                     Err(e) => {
-                        info!("Auth request failed: {:?}", e);
+                        tracing::error!("Auth request failed: {:?}", e);
                         false
                     }
                 }
