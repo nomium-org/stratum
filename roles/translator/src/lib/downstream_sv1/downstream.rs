@@ -559,13 +559,13 @@ impl IsServer<'static> for Downstream {
                                 if is_success {
                                     if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
 
-                                        super::super::worker_name_store::store_worker(
+                                        shares_logger::worker_name_store::store_worker(
                                             worker_name.clone(), 
                                             worker_id.to_string()
                                         );
                                         info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}", 
                                             worker_name,
-                                            super::super::worker_name_store::get_worker_identity(&worker_name)
+                                            shares_logger::worker_name_store::get_worker_identity(&worker_name)
                                         );
                                         return true;
                                     }

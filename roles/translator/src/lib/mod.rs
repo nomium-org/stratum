@@ -28,8 +28,6 @@ pub mod status;
 pub mod upstream_sv2;
 pub mod utils;
 
-pub mod worker_name_store;
-
 #[derive(Clone, Debug)]
 pub struct TranslatorSv2 {
     config: ProxyConfig,

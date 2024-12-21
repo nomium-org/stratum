@@ -4,6 +4,7 @@ pub mod models;
 pub mod services;
 pub mod storage;
 pub mod traits;
+pub mod worker_name_store;
 
 use crate::config::SETTINGS;
 use crate::traits::ShareData;

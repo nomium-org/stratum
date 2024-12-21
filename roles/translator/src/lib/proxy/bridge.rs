@@ -302,9 +302,9 @@ impl Bridge {
 
         info!("!!!! FROM BRIDGE. Worker name: {}, Stored identity: {:?}", 
             sv1_submit.user_name,
-            super::super::worker_name_store::get_worker_identity(&sv1_submit.user_name)
+            shares_logger::worker_name_store::get_worker_identity(&sv1_submit.user_name)
         );
-        let user_identity = if let Some(identity) = super::super::worker_name_store::get_worker_identity(&sv1_submit.user_name) {
+        let user_identity = if let Some(identity) = shares_logger::worker_name_store::get_worker_identity(&sv1_submit.user_name) {
             identity.to_string().try_into()?
         } else {
             sv1_submit.user_name.try_into()?
