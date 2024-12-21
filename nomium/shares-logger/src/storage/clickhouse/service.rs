@@ -7,6 +7,7 @@ use clickhouse::Client;
 use log::info;
 use std::time::Duration;
 use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
+use log::error;
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
@@ -141,17 +142,31 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
 
     async fn store_share(&mut self, block: BlockFound) -> Result<(), ClickhouseError> {
         info!("Storing found block immediately");
-        let mut batch_inserter = self.client.insert("blocks")
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-            
-        let clickhouse_block = ClickhouseBlock::from(block);
-        batch_inserter.write(&clickhouse_block).await
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-            
-        batch_inserter.end().await
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-            
-        info!("Successfully stored found block");
+        let block_data = ClickhouseBlock::from(block);
+        info!("Block data for insert: {:?}", block_data);
+        
+        let mut batch_inserter = match self.client.insert("blocks") {
+            Ok(inserter) => {
+                info!("Created batch inserter successfully");
+                inserter
+            },
+            Err(e) => {
+                error!("Failed to create batch inserter: {:?}", e);
+                return Err(ClickhouseError::BatchInsertError(e.to_string()));
+            }
+        };
+    
+        match batch_inserter.write(&block_data).await {
+            Ok(_) => info!("Successfully wrote block data"),
+            Err(e) => error!("Failed to write block data: {:?}", e),
+        }
+    
+        match batch_inserter.end().await {
+            Ok(_) => info!("Successfully ended batch insert"),
+            Err(e) => error!("Failed to end batch insert: {:?}", e),
+        }
+    
+        info!("Block storage completed");
         Ok(())
     }
 

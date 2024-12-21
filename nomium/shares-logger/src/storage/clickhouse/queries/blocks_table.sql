@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS blocks (
     user_identity String,
+    worker_id String,
     channel_id UInt32,
     block_hash String,
     ntime UInt32,

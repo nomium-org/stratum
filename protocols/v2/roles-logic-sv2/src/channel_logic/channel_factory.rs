@@ -887,17 +887,19 @@ impl ChannelFactory {
                 print_hash.to_vec().to_hex()
             );
             // NOMIUM share_log injection ----
-            let block = shares_logger::models::BlockFound {
-                channel_id: m.get_channel_id(),
-                block_hash: hash_.as_hash().into_inner().to_vec(),
-                ntime: m.get_n_time() as u32,
-                user_identity: match &m {
-                    Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
-                        .unwrap_or("invalid_utf8")
-                        .to_string(),
-                    Share::Standard(_) => "unknown".to_string(),
-                },
+            let user_identity_json = match &m {
+                Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
+                    .unwrap_or("invalid_utf8")
+                    .to_string(),
+                Share::Standard(_) => "unknown".to_string(),
             };
+            
+            let block = shares_logger::models::BlockFound::prepare_block(
+                m.get_channel_id(),
+                hash_.as_hash().into_inner().to_vec(),
+                m.get_n_time() as u32,
+                user_identity_json,
+            );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection
 
