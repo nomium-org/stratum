@@ -8,7 +8,7 @@ COPY ./ .
 
 WORKDIR /stratum/roles/translator
 RUN which openssl
-#RUN export OPENSSL_DIR=/usr/bin/openssl
+ENV OPENSSL_DIR=/usr
 RUN rustup target add x86_64-unknown-linux-musl
 RUN cargo tree -i openssl-sys --no-dedupe
 RUN cargo check --target x86_64-unknown-linux-musl
