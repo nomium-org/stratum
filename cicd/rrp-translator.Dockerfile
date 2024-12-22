@@ -8,7 +8,7 @@ WORKDIR /stratum
 COPY ./ .
 
 WORKDIR /stratum/roles/translator
-RUN rustup target add x86_64-unknown-linux-musl
+RUN rustup target add x86_64-unknown-linux-gnu
 RUN cargo check --target x86_64-unknown-linux-gnu
 RUN cargo build --target x86_64-unknown-linux-gnu --release
 
