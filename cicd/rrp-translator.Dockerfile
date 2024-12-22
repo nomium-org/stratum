@@ -6,8 +6,10 @@ WORKDIR /stratum
 COPY ./ .
 
 WORKDIR /stratum/roles/translator
-RUN export OPENSSL_DIR=/usr/bin/openssl
+RUN which openssl
+#RUN export OPENSSL_DIR=/usr/bin/openssl
 RUN rustup target add x86_64-unknown-linux-musl
+RUN cargo check
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
 FROM scratch
