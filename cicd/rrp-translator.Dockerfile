@@ -1,21 +1,7 @@
 FROM rust:1.82 AS build
 
 RUN apt-get update 
-RUN apt-get install -y musl-tools libssl-dev pkg-config
-ENV OPENSSL_DIR=/usr \
-    OPENSSL_INCLUDE_DIR=/usr/include \
-    OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-
-# Устанавливаем musl-версию OpenSSL
-RUN apt-get install -y musl-dev && \
-    curl -O https://www.openssl.org/source/openssl-1.1.1u.tar.gz && \
-    tar -xzf openssl-1.1.1u.tar.gz && \
-    cd openssl-1.1.1u && \
-    CC=musl-gcc ./Configure no-shared no-dso no-hw no-engine linux-mips64 && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf openssl-1.1.1u openssl-1.1.1u.tar.gz
+RUN apt-get install -y musl-tools
 
 WORKDIR /stratum
 COPY ./ .
