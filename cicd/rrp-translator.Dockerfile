@@ -1,6 +1,7 @@
 FROM rust:1.82 AS build
 
 RUN apt-get update && apt-get install -y musl-tools
+RUN apt-get install libssl-dev
 
 WORKDIR /stratum
 COPY ./ .
