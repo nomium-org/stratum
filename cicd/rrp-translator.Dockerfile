@@ -1,18 +1,16 @@
 FROM rust:1.82 AS build
 
-RUN apt-get update && apt-get install -y musl-tools
+RUN apt-get update 
+#RUN&& apt-get install -y musl-tools
 RUN apt-get install libssl-dev
 
 WORKDIR /stratum
 COPY ./ .
 
 WORKDIR /stratum/roles/translator
-RUN which openssl
-ENV OPENSSL_DIR=/usr
 RUN rustup target add x86_64-unknown-linux-musl
-RUN cargo tree -i openssl-sys --no-dedupe
-RUN cargo check --target x86_64-unknown-linux-musl
-#RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo check --target x86_64-unknown-linux-gnu
+RUN cargo build --target x86_64-unknown-linux-gnu --release
 
 FROM scratch
 
