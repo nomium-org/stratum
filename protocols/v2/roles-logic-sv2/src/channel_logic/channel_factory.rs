@@ -90,7 +90,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
-                        user_identity: "into_extended_hardcode".to_string().try_into().unwrap(),
+                        user_identity: "nomium_to_do".to_string().try_into().unwrap(), // cause we really work with extended share only
                     };
                     *self = Self::SendSubmitShareUpstream((Share::Extended(share), *template_id));
                 }
@@ -107,7 +107,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
-                        user_identity: "into_extended_hardcode".to_string().try_into().unwrap(),
+                        user_identity: "nomium_to_do".to_string().try_into().unwrap(), // cause we really work with extended share only
                     };
                     *self = Self::ShareMeetBitcoinTarget((
                         Share::Extended(share),

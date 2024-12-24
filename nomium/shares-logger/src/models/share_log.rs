@@ -68,21 +68,5 @@ impl ShareData for ShareLog {
         true
     }
 
-    fn to_storage_format(&self) -> Vec<(String, String)> {
-        vec![
-            ("channel_id".to_string(), self.channel_id.to_string()),
-            ("sequence_number".to_string(), self.sequence_number.to_string()),
-            ("job_id".to_string(), self.job_id.to_string()),
-            ("nonce".to_string(), self.nonce.to_string()),
-            ("ntime".to_string(), self.ntime.to_string()),
-            ("version".to_string(), self.version.to_string()),
-            ("hash".to_string(), hex::encode(&self.hash)),
-            ("share_status".to_string(), (self.share_status as u8).to_string()),
-            ("extranonce".to_string(), hex::encode(&self.extranonce)),
-            ("difficulty".to_string(), self.difficulty.to_string()),
-            ("user_identity".to_string(), self.user_identity.clone()),
-        ]
-    }
-
     fn is_block_found(&self) -> bool { false }
 }

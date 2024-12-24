@@ -61,16 +61,6 @@ impl ShareData for BlockFound {
         self.block_hash.len() == 32
     }
 
-    fn to_storage_format(&self) -> Vec<(String, String)> {
-        vec![
-            ("channel_id".to_string(), self.channel_id.to_string()),
-            ("block_hash".to_string(), hex::encode(&self.block_hash)),
-            ("ntime".to_string(), self.ntime.to_string()),
-            ("user_identity".to_string(), self.user_identity.clone()),
-            ("worker_id".to_string(), self.worker_id.clone()),
-        ]
-    }
-
     fn is_block_found(&self) -> bool { 
         true 
     }
