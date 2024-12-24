@@ -1,6 +1,4 @@
 use serde::{Serialize, Deserialize};
-use crate::traits::ShareData;
-use async_trait::async_trait;
 use serde_json::Value;
 use serde_json::json;
 use log::info;
@@ -48,20 +46,5 @@ impl BlockFound {
             user_identity,
             worker_id,
         }
-    }
-}
-
-#[async_trait]
-impl ShareData for BlockFound {
-    fn get_identifier(&self) -> String {
-        format!("{}_{}_{}", self.user_identity, hex::encode(&self.block_hash), self.ntime)
-    }
-
-    async fn validate(&self) -> bool {
-        self.block_hash.len() == 32
-    }
-
-    fn is_block_found(&self) -> bool { 
-        true 
     }
 }

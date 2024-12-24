@@ -1,6 +1,4 @@
 use serde::{Serialize, Deserialize};
-use crate::traits::ShareData;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareLog {
@@ -56,17 +54,4 @@ impl ShareLog {
             worker_id,
         }
     }
-}
-
-#[async_trait]
-impl ShareData for ShareLog {
-    fn get_identifier(&self) -> String {
-        format!("{}_{}", self.channel_id, self.sequence_number)
-    }
-
-    async fn validate(&self) -> bool {
-        true
-    }
-
-    fn is_block_found(&self) -> bool { false }
 }
