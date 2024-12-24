@@ -36,6 +36,8 @@ use v1::{
     IsServer,
 };
 
+use std::env;
+
 const MAX_LINE_LENGTH: usize = 2_usize.pow(16);
 
 /// Handles the sending and receiving of messages to and from an SV2 Upstream role (most typically
@@ -535,15 +537,38 @@ impl IsServer<'static> for Downstream {
         
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
+
+                let api_url = env::var("REDROCK_API_URL")
+                    .map(|url| {
+                        tracing::info!("Using REDROCK_API_URL from environment: {}", url);
+                        url
+                    })
+                    .unwrap_or_else(|_| {
+                        let default_url = "https://qa.redrockpool.com/equipment-api/v1/worker-authentication".to_string();
+                        tracing::warn!("REDROCK_API_URL not found in environment, using default: {}", default_url);
+                        default_url
+                    });
+
+                let api_key = env::var("REDROCK_API_KEY")
+                    .map(|key| {
+                        tracing::info!("Using REDROCK_API_KEY from environment: {}", "*".repeat(key.len()));
+                        key
+                    })
+                    .unwrap_or_else(|_| {
+                        let default_key = "ZcU8z5W87ufe".to_string();
+                        tracing::warn!("REDROCK_API_KEY not found in environment, using default: {}", "*".repeat(default_key.len()));
+                        default_key
+                    });
+
                 let client = reqwest::Client::builder()
                     .timeout(std::time::Duration::from_secs(5))
                     .build()
                     .unwrap();
     
                 let result = client
-                    .post("https://qa.redrockpool.com/equipment-api/v1/worker-authentication")
+                    .post(&api_url)
                     .header("accept", "text/plain")
-                    .header("X-Api-Key", "ZcU8z5W87ufe")
+                    .header("X-Api-Key", api_key)
                     .header("Content-Type", "application/json")
                     .json(&serde_json::json!({
                         "accountName": worker_name.split('.').next().unwrap_or(""),
