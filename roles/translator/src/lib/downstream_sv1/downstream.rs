@@ -4,7 +4,6 @@ use crate::{
     proxy_config::{DownstreamDifficultyConfig, UpstreamDifficultyConfig},
     status,
 };
-//use super::super::worker_name_store::{store_worker, get_worker_identity, WorkerIdentity};
 use async_channel::{bounded, Receiver, Sender};
 use async_std::{
     io::BufReader,
