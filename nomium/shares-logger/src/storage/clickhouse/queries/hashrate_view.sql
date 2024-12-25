@@ -8,7 +8,7 @@ SELECT
     worker_id,
     toStartOfMinute(timestamp) AS period_start,
     count() AS share_count,
-    sum(difficulty * pow(2, 32)) AS total_hashes,
+    min(difficulty) * count() * pow(2, 32) AS total_hashes,
     sum(CASE WHEN share_status = 0 THEN 1 ELSE 0 END) AS refused_shards,
     max(timestamp) AS max_timestamp
 FROM shares
