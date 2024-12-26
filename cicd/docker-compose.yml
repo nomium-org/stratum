@@ -17,6 +17,8 @@ services:
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
+        environment:
+          - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
         container_name: pool
         network_mode: host
  
