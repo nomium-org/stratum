@@ -4,9 +4,9 @@ pub mod models;
 pub mod services;
 pub mod storage;
 pub mod traits;
+pub mod worker_name_store;
 
 use crate::config::SETTINGS;
-use crate::traits::ShareData;
 use log::info;
 use std::sync::Arc;
 use tokio::sync::{mpsc::{self, error::TrySendError}, Mutex};
@@ -18,6 +18,8 @@ use crate::traits::ShareStorage;
 use crate::storage::clickhouse::ClickhouseBlockStorage;
 use crate::models::BlockFound;
 use std::time::Instant;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
@@ -45,18 +47,18 @@ pub fn log_block(block: BlockFound) {
     BLOCK_LOGGER.log_share(block);
 }
 
-pub struct ShareLogger<T: ShareData> {
+pub struct ShareLogger<T: Send + Sync + Clone + Serialize + DeserializeOwned> {
     primary_tx: mpsc::Sender<T>,
     backup_tx: mpsc::UnboundedSender<T>,
 }
 
-pub struct ShareLoggerBuilder<T: ShareData> {
+pub struct ShareLoggerBuilder<T: Send + Sync + Clone + Serialize + DeserializeOwned> {
     storage: Arc<Mutex<Box<dyn ShareStorage<T>>>>,
     primary_channel_size: Option<usize>,
     backup_check_interval: Option<Duration>,
 }
 
-impl<T: ShareData + 'static> ShareLoggerBuilder<T> {
+impl<T: Send + Sync + Clone + Serialize + DeserializeOwned + 'static> ShareLoggerBuilder<T> {
 
     pub fn new(storage: Box<dyn ShareStorage<T>>) -> Self {
         Self {
@@ -103,7 +105,7 @@ impl<T: ShareData + 'static> ShareLoggerBuilder<T> {
     }
 }
 
-impl<T: ShareData + 'static> ShareLogger<T> {
+impl<T: Send + Sync + Clone + Serialize + DeserializeOwned + 'static> ShareLogger<T> {
     pub fn log_share(&self, share: T) {
         match self.primary_tx.try_send(share.clone()) {
             Ok(_) => (),
@@ -116,7 +118,7 @@ impl<T: ShareData + 'static> ShareLogger<T> {
     }
 }
 
-async fn process_shares<T: ShareData>(
+async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
     mut primary_rx: mpsc::Receiver<T>,
     mut backup_rx: mpsc::UnboundedReceiver<T>,
     storage: Arc<Mutex<Box<dyn ShareStorage<T>>>>,
@@ -129,36 +131,20 @@ async fn process_shares<T: ShareData>(
     }
     let init_duration = init_start.elapsed();
     info!("Storage initialized in: {:?}", init_duration);
-
     let mut backup_interval = tokio::time::interval(backup_check_interval);
-
     loop {
         tokio::select! {
             Some(share) = primary_rx.recv() => {
                 info!("Processing share from primary channel");
-
-                if share.is_block_found() {
-                    if let Err(e) = storage.lock().await.store_share(share).await {
-                        info!("Failed to store block: {}", e);
-                    }
-                } else {
-                    if let Err(e) = storage.lock().await.store_share(share).await {
-                        info!("Failed to store share: {}", e);
-                    }
+                if let Err(e) = storage.lock().await.store_share(share).await {
+                    info!("Failed to store share: {}", e);
                 }
             }
             _ = backup_interval.tick() => {
                 let mut backup_shares = Vec::new();
                 while let Ok(share) = backup_rx.try_recv() {
-                    if share.is_block_found() {
-                        if let Err(e) = storage.lock().await.store_share(share).await {
-                            info!("Failed to store backup block: {}", e);
-                        }
-                    } else {
-                        backup_shares.push(share);
-                    }
+                    backup_shares.push(share);
                 }
-
                 if !backup_shares.is_empty() {
                     if let Err(e) = storage.lock().await.store_batch(backup_shares).await {
                         info!("Failed to store backup shares: {}", e);

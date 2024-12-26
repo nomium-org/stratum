@@ -6,6 +6,7 @@ use args::Args;
 use error::{Error, ProxyResult};
 pub use lib::{downstream_sv1, error, proxy, proxy_config, status, upstream_sv2};
 use proxy_config::ProxyConfig;
+use dotenvy::dotenv;
 
 use ext_config::{Config, File, FileFormat};
 
@@ -37,6 +38,7 @@ fn process_cli_args<'a>() -> ProxyResult<'a, ProxyConfig> {
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     tracing_subscriber::fmt::init();
 
     let proxy_config = match process_cli_args() {

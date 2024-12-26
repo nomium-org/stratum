@@ -57,6 +57,9 @@ pub struct SubmitSharesExtended<'decoder> {
     /// from channel opening.
     #[cfg_attr(feature = "with_serde", serde(borrow))]
     pub extranonce: B032<'decoder>,
+    //
+    #[cfg_attr(feature = "with_serde", serde(borrow))]
+    pub user_identity: Str0255<'decoder>,
 }
 
 /// # SubmitShares.Success (Server -> Client)
@@ -137,6 +140,7 @@ impl<'d> GetSize for SubmitSharesExtended<'d> {
             + self.ntime.get_size()
             + self.version.get_size()
             + self.extranonce.get_size()
+            + self.user_identity.get_size()
     }
 }
 #[cfg(feature = "with_serde")]

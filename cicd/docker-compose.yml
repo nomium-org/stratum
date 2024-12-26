@@ -7,6 +7,9 @@ services:
           - CLICKHOUSE_USER=${CLICKHOUSE_USER}
           - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
         restart: always
+        privileged: true
+        volumes:
+          - /var/log/clickhouse-server:/var/log/clickhouse-server
         ports:
           - 8123:8123
         network_mode: host

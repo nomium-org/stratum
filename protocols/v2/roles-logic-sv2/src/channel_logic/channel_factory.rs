@@ -90,6 +90,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
+                        user_identity: "nomium_to_do".to_string().try_into().unwrap(), // cause we really work with extended share only
                     };
                     *self = Self::SendSubmitShareUpstream((Share::Extended(share), *template_id));
                 }
@@ -106,6 +107,7 @@ impl OnNewShare {
                         ntime: share.ntime,
                         version: share.version,
                         extranonce: extranonce.try_into().unwrap(),
+                        user_identity: "nomium_to_do".to_string().try_into().unwrap(), // cause we really work with extended share only
                     };
                     *self = Self::ShareMeetBitcoinTarget((
                         Share::Extended(share),
@@ -830,6 +832,12 @@ impl ChannelFactory {
         let hash = hash_.as_hash().into_inner();
 
         // NOMIUM share_log injection ----
+        let user_identity = match &m {
+            Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
+                .unwrap_or("invalid_utf8")
+                .to_string(),
+            Share::Standard(_) => panic!("Expected Extended share, got Standard"),
+        };
         match self.kind {
             ExtendedChannelKind::Pool => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
@@ -841,7 +849,8 @@ impl ChannelFactory {
                     m.get_version(),
                     hash,
                     downstream_target.clone(),
-                    extranonce.to_vec()
+                    extranonce.to_vec(),
+                    user_identity,
                 );
                 info!("Calling share logging for POOL");
                 shares_logger::log_share(share_log);
@@ -878,11 +887,19 @@ impl ChannelFactory {
                 print_hash.to_vec().to_hex()
             );
             // NOMIUM share_log injection ----
-            let block = shares_logger::models::BlockFound {
-                channel_id: m.get_channel_id(),
-                block_hash: hash_.as_hash().into_inner().to_vec(),
-                ntime: m.get_n_time() as u32,
+            let user_identity_json = match &m {
+                Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
+                    .unwrap_or("invalid_utf8")
+                    .to_string(),
+                Share::Standard(_) => "unknown".to_string(),
             };
+            
+            let block = shares_logger::models::BlockFound::prepare_block(
+                m.get_channel_id(),
+                hash_.as_hash().into_inner().to_vec(),
+                m.get_n_time() as u32,
+                user_identity_json,
+            );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection
 
@@ -1184,6 +1201,12 @@ impl PoolChannelFactory {
         &mut self,
         m: SubmitSharesExtended,
     ) -> Result<OnNewShare, Error> {
+        //
+        info!(
+            "on_submit_shares_extended(): {}",
+            std::str::from_utf8(m.user_identity.as_ref()).unwrap_or("invalid utf8")
+        );
+        //
         let target = self.job_creator.last_target();
         // When downstream set a custom mining job we add the job to the negotiated job
         // hashmap, with the extended channel id as a key. Whenever the pool receive a share must

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS shares (
-    channel_id UInt32,
+    user_identity String,
+    worker_id String,
     sequence_number UInt32,
     job_id UInt32,
     nonce UInt32,
@@ -9,9 +10,9 @@ CREATE TABLE IF NOT EXISTS shares (
     share_status UInt8,
     extranonce String,
     difficulty Float64,
+    channel_id UInt32,
     timestamp DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
-PRIMARY KEY (channel_id, timestamp)
-ORDER BY (channel_id, timestamp, sequence_number)
-SETTINGS index_granularity = 8192
+ORDER BY (worker_id, timestamp, ntime)
+SETTINGS index_granularity = 8192;

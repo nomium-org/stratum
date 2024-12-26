@@ -1,6 +1,4 @@
 use serde::{Serialize, Deserialize};
-use crate::traits::ShareData;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareLog {
@@ -14,6 +12,8 @@ pub struct ShareLog {
     pub share_status: ShareStatus,
     pub extranonce: Vec<u8>,
     pub difficulty: f64,
+    pub user_identity: String,
+    pub worker_id: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -36,6 +36,8 @@ impl ShareLog {
         share_status: ShareStatus,
         extranonce: Vec<u8>,
         difficulty: f64,
+        user_identity: String,
+        worker_id: String,
     ) -> Self {
         Self {
             channel_id,
@@ -47,35 +49,9 @@ impl ShareLog {
             hash,
             share_status,
             extranonce,
-            difficulty
+            difficulty,
+            user_identity,
+            worker_id,
         }
     }
-}
-
-#[async_trait]
-impl ShareData for ShareLog {
-    fn get_identifier(&self) -> String {
-        format!("{}_{}", self.channel_id, self.sequence_number)
-    }
-
-    async fn validate(&self) -> bool {
-        true
-    }
-
-    fn to_storage_format(&self) -> Vec<(String, String)> {
-        vec![
-            ("channel_id".to_string(), self.channel_id.to_string()),
-            ("sequence_number".to_string(), self.sequence_number.to_string()),
-            ("job_id".to_string(), self.job_id.to_string()),
-            ("nonce".to_string(), self.nonce.to_string()),
-            ("ntime".to_string(), self.ntime.to_string()),
-            ("version".to_string(), self.version.to_string()),
-            ("hash".to_string(), hex::encode(&self.hash)),
-            ("share_status".to_string(), (self.share_status as u8).to_string()),
-            ("extranonce".to_string(), hex::encode(&self.extranonce)),
-            ("difficulty".to_string(), self.difficulty.to_string()),
-        ]
-    }
-
-    fn is_block_found(&self) -> bool { false }
 }
