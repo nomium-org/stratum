@@ -19,6 +19,7 @@ services:
         restart: always
         environment:
           - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
+          - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
         container_name: pool
         network_mode: host
  
