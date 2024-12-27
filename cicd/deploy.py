@@ -10,6 +10,9 @@ PORTAINER_HOST = os.getenv("PORTAINER_HOST")
 PORTAINER_PORT = os.getenv("PORTAINER_PORT")
 STACK_ID = os.getenv("STACK_ID")
 ENDPOINT_ID = os.getenv("ENDPOINT_ID")
+STRATUM_BRANCH = os.getenv("STRATUM_BRANCH")
+REDROCK_API_URL = os.getenv("REDROCK_API_URL")
+REDROCK_API_KEY = os.getenv("REDROCK_API_KEY")
 
 url = f"http://{PORTAINER_HOST}:{PORTAINER_PORT}/api/stacks/{STACK_ID}/git/redeploy?endpointId={ENDPOINT_ID}"
 
@@ -22,12 +25,14 @@ data = {
     "env": [
         {"name": "CLICKHOUSE_USER", "value": CLICKHOUSE_USER},
         {"name": "CLICKHOUSE_PASSWORD", "value": CLICKHOUSE_PASSWORD},
-        {"name": "NEXUS_URL", "value": NEXUS_URL}
+        {"name": "NEXUS_URL", "value": NEXUS_URL},
+        {"name": "REDROCK_API_URL", "value": REDROCK_API_URL},
+        {"name": "REDROCK_API_KEY", "value": REDROCK_API_KEY}
     ],
     "prune": False,
     "pullImage": True,
     "repositoryAuthentication": False,
-    "repositoryReferenceName": "refs/heads/nomium-main"
+    "repositoryReferenceName": f"refs/heads/{STRATUM_BRANCH}"
 }
 
 response = requests.put(url, headers=headers, data=json.dumps(data))
