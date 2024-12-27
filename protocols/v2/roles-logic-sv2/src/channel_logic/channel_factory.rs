@@ -840,7 +840,7 @@ impl ChannelFactory {
         };
         match self.kind {
             ExtendedChannelKind::Pool => {
-                let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
                     m.get_channel_id(),
                     1,
                     m.get_job_id(),
@@ -851,9 +851,9 @@ impl ChannelFactory {
                     downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
-                );
+                ); */
                 info!("Calling share logging for POOL");
-                shares_logger::log_share(share_log);
+                //shares_logger::log_share(share_log);
             },
             ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
