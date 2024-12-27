@@ -17,11 +17,18 @@ services:
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
+        environment:
+          - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
+          - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
         container_name: pool
         network_mode: host
  
     translator:
         image: ${NEXUS_URL}/rrp-translator:latest
         restart: always
+        environment:
+          - REDROCK_API_URL=${REDROCK_API_URL}
+          - REDROCK_API_KEY=${REDROCK_API_KEY}
+          - REDROCK_TIMEOUT_SECONDS=5
         container_name: translator
         network_mode: host
