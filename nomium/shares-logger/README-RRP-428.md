@@ -40,4 +40,7 @@ LIMIT 10
 FORMAT Pretty"
 ```
 
-#### 2. Логи пишет в файлы директории: roles/logs
+#### 2. Логи пишет в файлы директории: 
+
+1. roles/pool/config-examples/logs
+2. roles/translator/config-examples/logs
