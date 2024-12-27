@@ -26,6 +26,8 @@ services:
     translator:
         image: ${NEXUS_URL}/rrp-translator:latest
         restart: always
+        volumes:
+          - /var/log/translator:/app/logs
         environment:
           - REDROCK_API_URL=${REDROCK_API_URL}
           - REDROCK_API_KEY=${REDROCK_API_KEY}
