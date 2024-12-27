@@ -10,6 +10,7 @@ PORTAINER_HOST = os.getenv("PORTAINER_HOST")
 PORTAINER_PORT = os.getenv("PORTAINER_PORT")
 STACK_ID = os.getenv("STACK_ID")
 ENDPOINT_ID = os.getenv("ENDPOINT_ID")
+STRATUM_BRANCH = os.getenv("STRATUM_BRANCH")
 
 url = f"http://{PORTAINER_HOST}:{PORTAINER_PORT}/api/stacks/{STACK_ID}/git/redeploy?endpointId={ENDPOINT_ID}"
 
@@ -27,7 +28,7 @@ data = {
     "prune": False,
     "pullImage": True,
     "repositoryAuthentication": False,
-    "repositoryReferenceName": "refs/heads/nomium-main"
+    "repositoryReferenceName": "refs/heads/{STRATUM_BRANCH}"
 }
 
 response = requests.put(url, headers=headers, data=json.dumps(data))
