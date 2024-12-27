@@ -27,8 +27,8 @@ services:
         image: ${NEXUS_URL}/rrp-translator:latest
         restart: always
         environment:
-          - REDROCK_API_URL=https://qa.redrockpool.com/equipment-api/v1/worker-authentication
-          - REDROCK_API_KEY=ZcU8z5W87ufe
+          - REDROCK_API_URL=${REDROCK_API_URL}
+          - REDROCK_API_KEY=${REDROCK_API_KEY}
           - REDROCK_TIMEOUT_SECONDS=5
         container_name: translator
         network_mode: host
