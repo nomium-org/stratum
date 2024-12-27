@@ -32,7 +32,7 @@ data = {
     "prune": False,
     "pullImage": True,
     "repositoryAuthentication": False,
-    "repositoryReferenceName": "refs/heads/{STRATUM_BRANCH}"
+    "repositoryReferenceName": f"refs/heads/{STRATUM_BRANCH}"
 }
 
 response = requests.put(url, headers=headers, data=json.dumps(data))
