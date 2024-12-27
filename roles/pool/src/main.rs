@@ -4,6 +4,7 @@ mod lib;
 use ext_config::{Config, File, FileFormat};
 pub use lib::{mining_pool::Configuration, status, PoolSv2};
 use tracing::error;
+use tracing_subscriber::prelude::*;
 
 mod args {
     use std::path::PathBuf;
@@ -70,7 +71,29 @@ mod args {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+        tracing_appender::rolling::Rotation::DAILY,                    
+        "../../logs",                             
+        "Pool.log",                  
+    );
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(file_appender)
+                .with_ansi(false)            
+                .with_thread_ids(true)       
+                .with_thread_names(true)     
+                .with_file(true)             
+                .with_line_number(true)
+                .with_filter(tracing_subscriber::filter::LevelFilter::INFO) 
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stdout) 
+                .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG) 
+        )
+        .init();
 
     let args = match args::Args::from_args() {
         Ok(cfg) => cfg,
