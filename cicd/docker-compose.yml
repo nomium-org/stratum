@@ -17,6 +17,8 @@ services:
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
+        volumes:
+          - /var/log/pool:/app/logs
         environment:
           - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
           - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
