@@ -7,6 +7,7 @@ use error::{Error, ProxyResult};
 pub use lib::{downstream_sv1, error, proxy, proxy_config, status, upstream_sv2};
 use proxy_config::ProxyConfig;
 use dotenvy::dotenv;
+use tracing_subscriber::prelude::*;
 
 use ext_config::{Config, File, FileFormat};
 
@@ -39,7 +40,30 @@ fn process_cli_args<'a>() -> ProxyResult<'a, ProxyConfig> {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    tracing_subscriber::fmt::init();
+
+    let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+        tracing_appender::rolling::Rotation::DAILY,                    
+        "logs",                             
+        "Translator.log",                  
+    );
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(file_appender)
+                .with_ansi(false)            
+                .with_thread_ids(true)       
+                .with_thread_names(true)     
+                .with_file(true)             
+                .with_line_number(true)
+                .with_filter(tracing_subscriber::filter::LevelFilter::INFO) 
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stdout) 
+                .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG) 
+        )
+        .init();
 
     let proxy_config = match process_cli_args() {
         Ok(p) => p,

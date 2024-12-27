@@ -47,6 +47,7 @@ rand = "0.8.4"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 shares-logger = { path = "../../nomium/shares-logger" }
 dotenvy = "0.15"
+tracing-appender = "0.2"
 
 
 [dev-dependencies]
