@@ -43,7 +43,7 @@ async fn main() {
 
     let file_appender = tracing_appender::rolling::RollingFileAppender::new(
         tracing_appender::rolling::Rotation::DAILY,                    
-        "logs",                             
+        "../../logs",                             
         "Translator.log",                  
     );
 

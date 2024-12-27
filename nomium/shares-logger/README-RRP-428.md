@@ -39,3 +39,5 @@ ORDER BY (From_Pool + From_Proxy) DESC
 LIMIT 10
 FORMAT Pretty"
 ```
+
+#### 2. Логи пишет в файлы директории: roles/logs
