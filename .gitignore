@@ -19,3 +19,5 @@ cobertura.xml
 /examples/*/Cargo.lock
 /scripts/sv2.h
 /localtemp
+/roles/pool/config-examples/logs
+/roles/translator/config-examples/logs
