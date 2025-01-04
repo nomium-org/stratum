@@ -1,3 +1,4 @@
+use crate::metrics::{SHARES_UPSTREAM_TARGET_MEET, SHARES_DOWNSTREAM_TARGET_MEET};
 use async_channel::{Receiver, Sender};
 use roles_logic_sv2::{
     channel_logic::channel_factory::{ExtendedChannelKind, ProxyExtendedChannelFactory, Share},
@@ -252,6 +253,7 @@ impl Bridge {
             }
             Ok(Ok(OnNewShare::SendSubmitShareUpstream((share, _)))) => {
                 info!("SHARE MEETS UPSTREAM TARGET");
+                SHARES_UPSTREAM_TARGET_MEET.inc();
                 match share {
                     Share::Extended(share) => {
                         tx_sv2_submit_shares_ext.send(share).await?;
@@ -264,6 +266,7 @@ impl Bridge {
             Ok(Ok(OnNewShare::RelaySubmitShareUpstream)) => unreachable!(),
             Ok(Ok(OnNewShare::ShareMeetDownstreamTarget)) => {
                 debug!("SHARE MEETS DOWNSTREAM TARGET");
+                SHARES_DOWNSTREAM_TARGET_MEET.inc();
             }
             // Proxy do not have JD capabilities
             Ok(Ok(OnNewShare::ShareMeetBitcoinTarget(..))) => unreachable!(),
