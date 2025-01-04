@@ -1,3 +1,5 @@
+use crate::metrics::TOTAL_SHARES;
+
 use crate::{
     downstream_sv1,
     error::ProxyResult,
@@ -615,6 +617,7 @@ impl IsServer<'static> for Downstream {
         // TODO: Check if receiving valid shares by adding diff field to Downstream
 
         if request.job_id == self.last_job_id {
+            TOTAL_SHARES.inc();
             let to_send = SubmitShareWithChannelId {
                 channel_id: self.connection_id,
                 share: request.clone(),

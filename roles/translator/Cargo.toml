@@ -48,7 +48,10 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 shares-logger = { path = "../../nomium/shares-logger" }
 dotenvy = "0.15"
 tracing-appender = "0.2"
-
+prometheus = "0.13"
+prometheus-static-metric = "0.5"
+lazy_static = "1.5"
+tiny_http = "0.12"
 
 [dev-dependencies]
 sha2 = "0.10.6"
