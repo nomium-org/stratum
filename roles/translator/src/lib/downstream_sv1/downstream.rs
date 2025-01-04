@@ -1,4 +1,4 @@
-use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS};
+use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS, SHARES_RECEIVED};
 
 use crate::{
     downstream_sv1,
@@ -629,6 +629,7 @@ impl IsServer<'static> for Downstream {
         debug!("Down: Handling mining.submit: {:?}", &request);
 
         // TODO: Check if receiving valid shares by adding diff field to Downstream
+        SHARES_RECEIVED.inc();
 
         if request.job_id == self.last_job_id {
             SHARES_VALID_JOBID.inc();
