@@ -4,6 +4,7 @@ import os
 # Замените эти переменные на ваши значения
 PORTAINER_TOKEN = os.getenv("PORTAINER_TOKEN")
 NEXUS_URL = os.getenv("NEXUS_URL")
+CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL")
 CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER")
 CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 PORTAINER_HOST = os.getenv("PORTAINER_HOST")
@@ -23,6 +24,7 @@ headers = {
 
 data = {
     "env": [
+        {"name": "CLICKHOUSE_URL", "value": CLICKHOUSE_URL},
         {"name": "CLICKHOUSE_USER", "value": CLICKHOUSE_USER},
         {"name": "CLICKHOUSE_PASSWORD", "value": CLICKHOUSE_PASSWORD},
         {"name": "NEXUS_URL", "value": NEXUS_URL},
