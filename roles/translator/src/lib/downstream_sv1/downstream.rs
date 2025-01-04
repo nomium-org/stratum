@@ -1,4 +1,4 @@
-use crate::metrics::TOTAL_SHARES;
+use crate::metrics::{TOTAL_SHARES, ACTIVE_CONNECTIONS};
 
 use crate::{
     downstream_sv1,
@@ -272,6 +272,9 @@ impl Downstream {
         let notify_task = tokio::task::spawn(async move {
             let timeout_timer = std::time::Instant::now();
             let mut first_sent = false;
+
+            let mut connection_counted = false;
+
             loop {
                 let is_a = match downstream.safe_lock(|d| !d.authorized_names.is_empty()) {
                     Ok(is_a) => is_a,
@@ -280,6 +283,12 @@ impl Downstream {
                         break;
                     }
                 };
+
+                if is_a && !connection_counted {
+                    ACTIVE_CONNECTIONS.inc();
+                    connection_counted = true;
+                }
+
                 if is_a && !first_sent && last_notify.is_some() {
                     let target = handle_result!(
                         tx_status_notify,
@@ -348,6 +357,11 @@ impl Downstream {
                     task::sleep(std::time::Duration::from_secs(1)).await;
                 }
             }
+
+            if connection_counted {
+                ACTIVE_CONNECTIONS.dec();
+            }        
+
             let _ = Self::remove_miner_hashrate_from_channel(self_);
             kill(&tx_shutdown).await;
             warn!(
