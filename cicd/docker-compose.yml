@@ -22,9 +22,9 @@ services:
         environment:
           - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
           - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
-#          - SHARES_LOGGER__CLICKHOUSE__URL=rc1d-3g9lg3esopmvtsoc.mdb.yandexcloud.net
-#          - SHARES_LOGGER__CLICKHOUSE__USERNAME=rrp_user
-#          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=55555555
+          - SHARES_LOGGER__CLICKHOUSE__URL=rc1d-3g9lg3esopmvtsoc.mdb.yandexcloud.net
+          - SHARES_LOGGER__CLICKHOUSE__USERNAME=rrp_user
+          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=55555555
         container_name: pool
         network_mode: host
  
@@ -40,8 +40,8 @@ services:
           - SHARES_LOGGER__CLICKHOUSE__BATCH_FLUSH_INTERVAL_SECS=60
           - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
           - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
-#          - SHARES_LOGGER__CLICKHOUSE__URL=rc1d-3g9lg3esopmvtsoc.mdb.yandexcloud.net
-#          - SHARES_LOGGER__CLICKHOUSE__USERNAME=rrp_user
-#          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=55555555
+          - SHARES_LOGGER__CLICKHOUSE__URL=rc1d-3g9lg3esopmvtsoc.mdb.yandexcloud.net
+          - SHARES_LOGGER__CLICKHOUSE__USERNAME=rrp_user
+          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=55555555
         container_name: translator
         network_mode: host
