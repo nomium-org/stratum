@@ -1,4 +1,4 @@
-use crate::metrics::{TOTAL_SHARES, ACTIVE_CONNECTIONS};
+use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS};
 
 use crate::{
     downstream_sv1,
@@ -631,7 +631,7 @@ impl IsServer<'static> for Downstream {
         // TODO: Check if receiving valid shares by adding diff field to Downstream
 
         if request.job_id == self.last_job_id {
-            TOTAL_SHARES.inc();
+            SHARES_VALID_JOBID.inc();
             let to_send = SubmitShareWithChannelId {
                 channel_id: self.connection_id,
                 share: request.clone(),

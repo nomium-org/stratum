@@ -4,8 +4,8 @@ use std::thread;
 use tiny_http::{Server, Response};
 
 lazy_static! {
-    pub static ref TOTAL_SHARES: IntCounter =
-        register_int_counter!("mining_shares_total", "Total number of shares received").unwrap();
+    pub static ref SHARES_VALID_JOBID: IntCounter = 
+        register_int_counter!("mining_shares_valid_jobid_total", "Number of shares with valid job ID").unwrap();
     pub static ref ACTIVE_CONNECTIONS: IntGauge =
         register_int_gauge!("mining_active_connections", "Number of active miner connections").unwrap();
 }
