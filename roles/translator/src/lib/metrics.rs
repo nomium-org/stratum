@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge, Encoder};
 use std::thread;
-use tiny_http::{Server, Response};
+use tiny_http::{Server, Response, Header};
 
 lazy_static! {
     pub static ref SHARES_RECEIVED: IntCounter =
@@ -51,7 +51,12 @@ pub fn start_metrics_server() {
             let mut buffer = Vec::new();
             encoder.encode(&prometheus::gather(), &mut buffer).unwrap();
             
-            let response = Response::from_data(buffer);
+            let content_type = Header::from_bytes(
+                "Content-Type",
+                "text/plain"
+            ).unwrap();
+            
+            let response = Response::from_data(buffer).with_header(content_type);
             let _ = request.respond(response);
         }
     });
