@@ -2370,6 +2370,7 @@ dependencies = [
  "codec_sv2",
  "config 0.14.1",
  "const_sv2",
+ "dotenvy",
  "error_handling",
  "hex",
  "key-utils",

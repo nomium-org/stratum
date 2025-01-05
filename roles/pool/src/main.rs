@@ -5,6 +5,9 @@ use ext_config::{Config, File, FileFormat};
 pub use lib::{mining_pool::Configuration, status, PoolSv2};
 use tracing::error;
 use tracing_subscriber::prelude::*;
+use dotenvy::dotenv;
+use tracing::Level;
+use std::str::FromStr;
 
 mod args {
     use std::path::PathBuf;
@@ -69,31 +72,42 @@ mod args {
     }
 }
 
+fn get_log_level(env_var: &str, default: Level) -> Level {
+    match std::env::var(env_var) {
+        Ok(level) => Level::from_str(&level).unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    let file_appender = tracing_appender::rolling::RollingFileAppender::new(
-        tracing_appender::rolling::Rotation::DAILY,                    
-        "logs",                             
-        "Pool.log",                  
-    );
+    dotenv().ok();
+let file_log_level = get_log_level("POOL_LOG_LEVEL_FILE", Level::INFO);
+let console_log_level = get_log_level("POOL_LOG_LEVEL_CONSOLE", Level::DEBUG);
 
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(file_appender)
-                .with_ansi(false)            
-                .with_thread_ids(true)       
-                .with_thread_names(true)     
-                .with_file(true)             
-                .with_line_number(true)
-                .with_filter(tracing_subscriber::filter::LevelFilter::INFO) 
-        )
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(std::io::stdout) 
-                .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG) 
-        )
-        .init();
+let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+    tracing_appender::rolling::Rotation::DAILY,
+    "logs",
+    "Pool.log",
+);
+
+tracing_subscriber::registry()
+    .with(
+        tracing_subscriber::fmt::layer()
+            .with_writer(file_appender)
+            .with_ansi(false)
+            .with_thread_ids(true)
+            .with_thread_names(true)
+            .with_file(true)
+            .with_line_number(true)
+            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(file_log_level))
+    )
+    .with(
+        tracing_subscriber::fmt::layer()
+            .with_writer(std::io::stdout)
+            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(console_log_level))
+    )
+    .init();
 
     let args = match args::Args::from_args() {
         Ok(cfg) => cfg,
