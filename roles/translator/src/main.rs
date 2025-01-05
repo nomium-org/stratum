@@ -55,25 +55,25 @@ async fn main() {
     let console_log_level = get_log_level("TPROXY_LOG_LEVEL_CONSOLE", Level::DEBUG);
 
     let file_appender = tracing_appender::rolling::RollingFileAppender::new(
-        tracing_appender::rolling::Rotation::DAILY,                    
-        "logs",                             
-        "Translator.log",                  
+        tracing_appender::rolling::Rotation::DAILY,
+        "logs",
+        "Translator.log",
     );
 
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(file_appender)
-                .with_ansi(false)            
-                .with_thread_ids(true)       
-                .with_thread_names(true)     
-                .with_file(true)             
+                .with_ansi(false)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_file(true)
                 .with_line_number(true)
                 .with_filter(tracing_subscriber::filter::LevelFilter::from_level(file_log_level))
         )
         .with(
             tracing_subscriber::fmt::layer()
-                .with_writer(std::io::stdout) 
+                .with_writer(std::io::stdout)
                 .with_filter(tracing_subscriber::filter::LevelFilter::from_level(console_log_level))
         )
         .init();

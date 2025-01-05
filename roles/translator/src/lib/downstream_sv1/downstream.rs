@@ -365,7 +365,7 @@ impl Downstream {
 
             if connection_counted {
                 ACTIVE_CONNECTIONS.dec();
-            }        
+            }
 
             let _ = Self::remove_miner_hashrate_from_channel(self_);
             kill(&tx_shutdown).await;
@@ -555,7 +555,7 @@ impl IsServer<'static> for Downstream {
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
         let worker_name = request.name.to_string();
-        
+
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
 
@@ -584,7 +584,7 @@ impl IsServer<'static> for Downstream {
                     .timeout(std::time::Duration::from_secs(timeout_seconds))
                     .build()
                     .unwrap();
-    
+
                 let result = client
                     .post(&api_url)
                     .header("accept", "text/plain")
@@ -596,7 +596,7 @@ impl IsServer<'static> for Downstream {
                     }))
                     .send()
                     .await;
-    
+
                 match result {
                     Ok(response) => {
                         if let Ok(json) = response.json::<serde_json::Value>().await {
@@ -605,10 +605,10 @@ impl IsServer<'static> for Downstream {
                                     if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
 
                                         shares_logger::worker_name_store::store_worker(
-                                            worker_name.clone(), 
+                                            worker_name.clone(),
                                             worker_id.to_string()
                                         );
-                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}", 
+                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}",
                                             worker_name,
                                             shares_logger::worker_name_store::get_worker_identity(&worker_name)
                                         );

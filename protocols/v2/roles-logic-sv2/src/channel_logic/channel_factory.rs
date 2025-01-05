@@ -906,7 +906,7 @@ impl ChannelFactory {
                     .to_string(),
                 Share::Standard(_) => "unknown".to_string(),
             };
-            
+
             let block = shares_logger::models::BlockFound::prepare_block(
                 m.get_channel_id(),
                 hash_.as_hash().into_inner().to_vec(),
