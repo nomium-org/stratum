@@ -1,13 +1,14 @@
 #![allow(special_module_name)]
 
 mod lib;
-use ext_config::{Config, File, FileFormat};
+use ext_config::{Config, File, FileFormat, Environment};
 pub use lib::{mining_pool::Configuration, status, PoolSv2};
-use tracing::error;
+use tracing::{error, debug};
 use tracing_subscriber::prelude::*;
 use dotenvy::dotenv;
 use tracing::Level;
 use std::str::FromStr;
+use std::env;
 
 mod args {
     use std::path::PathBuf;
@@ -119,13 +120,22 @@ tracing_subscriber::registry()
 
     let config_path = args.config_path.to_str().expect("Invalid config path");
 
+    if let Ok(env_tp_address) = env::var("POOL__TP_ADDRESS") {
+        debug!("Found POOL_TP_ADDRESS in environment: {}", env_tp_address);
+    }
     // Load config
-    let config: Configuration = match Config::builder()
+    let mut config: Configuration = match Config::builder()
         .add_source(File::new(config_path, FileFormat::Toml))
+        .add_source(Environment::with_prefix("POOL").separator("__"))
         .build()
     {
         Ok(settings) => match settings.try_deserialize::<Configuration>() {
-            Ok(c) => c,
+            Ok(c) => {
+                debug!("Configuration loaded successfully");
+                debug!("TP Address: {}", c.tp_address);
+                debug!("Full config: {:?}", c);
+                c
+            },
             Err(e) => {
                 error!("Failed to deserialize config: {}", e);
                 return;
@@ -136,5 +146,24 @@ tracing_subscriber::registry()
             return;
         }
     };
+
+    match (
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_TYPE"),
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_VALUE"),
+    ) {
+        (Ok(output_script_type), Ok(output_script_value)) => {
+            match config.coinbase_outputs.get_mut(0) {
+                Some(output) => {
+                    output.set_output_script_type(output_script_type);
+                    output.set_output_script_value(output_script_value);
+                    debug!("Overridden coinbase output: {:?}", output);
+                }
+                None => error!("coinbase_outputs is empty, cannot override values"),
+            }
+            debug!("Full config after override: {:?}", config);
+        }
+        _ => { /*  или ничего :) */ }
+    }
+
     let _ = PoolSv2::new(config).start().await;
 }
