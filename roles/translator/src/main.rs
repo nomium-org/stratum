@@ -10,6 +10,7 @@ use dotenvy::dotenv;
 use tracing_subscriber::prelude::*;
 use tracing::Level;
 use std::str::FromStr;
+use crate::lib::metrics;
 
 use ext_config::{Config, File, FileFormat};
 
@@ -82,6 +83,8 @@ async fn main() {
         Err(e) => panic!("failed to load config: {}", e),
     };
     info!("Proxy Config: {:?}", &proxy_config);
+
+    metrics::start_metrics_server();
 
     lib::TranslatorSv2::new(proxy_config).start().await;
 }
