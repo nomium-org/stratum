@@ -1,4 +1,4 @@
-use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS, SHARES_RECEIVED};
+use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS, SHARES_RECEIVED, CONNECTION_ATTEMPTS, CONNECTION_FAILURES, CONNECTION_AUTH_FAILURES, CONNECTION_TIMEOUT_FAILURES};
 
 use crate::{
     downstream_sv1,
@@ -116,6 +116,8 @@ impl Downstream {
         upstream_difficulty_config: Arc<Mutex<UpstreamDifficultyConfig>>,
         task_collector: Arc<Mutex<Vec<(AbortHandle, String)>>>,
     ) {
+        CONNECTION_ATTEMPTS.inc();
+
         let stream = std::sync::Arc::new(stream);
 
         // Reads and writes from Downstream SV1 Mining Device Client
@@ -279,6 +281,7 @@ impl Downstream {
                 let is_a = match downstream.safe_lock(|d| !d.authorized_names.is_empty()) {
                     Ok(is_a) => is_a,
                     Err(_e) => {
+                        CONNECTION_FAILURES.inc();
                         debug!("\nDownstream: Poison Lock - authorized_names\n");
                         break;
                     }
@@ -348,6 +351,8 @@ impl Downstream {
                     // timeout connection if miner does not send the authorize message after sending
                     // a subscribe
                     if timeout_timer.elapsed().as_secs() > SUBSCRIBE_TIMEOUT_SECS {
+                        CONNECTION_TIMEOUT_FAILURES.inc();
+                        CONNECTION_FAILURES.inc();
                         debug!(
                             "Downstream: miner.subscribe/miner.authorize TIMOUT for {}",
                             &host
@@ -421,6 +426,7 @@ impl Downstream {
                         .await;
                     }
                     Err(e) => {
+                        CONNECTION_FAILURES.inc();
                         tracing::error!("Failed to create a new downstream connection: {:?}", e);
                     }
                 }
@@ -611,9 +617,11 @@ impl IsServer<'static> for Downstream {
                                 }
                             }
                         }
+                        CONNECTION_AUTH_FAILURES.inc();
                         false
                     }
                     Err(e) => {
+                        CONNECTION_AUTH_FAILURES.inc();
                         tracing::error!("Auth request failed: {:?}", e);
                         false
                     }

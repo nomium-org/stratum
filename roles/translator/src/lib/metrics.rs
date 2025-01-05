@@ -23,6 +23,23 @@ lazy_static! {
     pub static ref ACTIVE_CONNECTIONS: IntGauge =
         register_int_gauge!("mining_active_connections", 
             "Number of active miner connections").unwrap();
+
+    pub static ref CONNECTION_ATTEMPTS: IntCounter =
+        register_int_counter!("mining_connection_attempts_total", 
+            "Total number of connection attempts").unwrap();
+                    
+    pub static ref CONNECTION_FAILURES: IntCounter =
+        register_int_counter!("mining_connection_failures_total", 
+            "Number of failed connection attempts").unwrap();
+        
+    pub static ref CONNECTION_AUTH_FAILURES: IntCounter = 
+        register_int_counter!("mining_auth_failures_total",
+            "Number of authentication failures").unwrap();
+                
+    pub static ref CONNECTION_TIMEOUT_FAILURES: IntCounter =
+        register_int_counter!("mining_timeout_failures_total",
+            "Number of connection timeouts").unwrap();
+
 }
 
 pub fn start_metrics_server() {
