@@ -1,19 +1,4 @@
 services:
-#    clickhouse:
-#        image: clickhouse:latest
-#        container_name: clickhouse
-#        environment:
-#          - CLICKHOUSE_DB=mining
-#          - CLICKHOUSE_USER=${CLICKHOUSE_USER}
-#          - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-#        restart: always
-#        privileged: true
-#        volumes:
-#          - /var/log/clickhouse-server:/var/log/clickhouse-server
-#        ports:
-#          - 8123:8123
-#        network_mode: host
-    
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
