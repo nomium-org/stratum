@@ -1,9 +1,14 @@
 #![allow(special_module_name)]
 
 mod lib;
-use ext_config::{Config, File, FileFormat};
+use ext_config::{Config, File, FileFormat, Environment};
 pub use lib::{mining_pool::Configuration, status, PoolSv2};
-use tracing::error;
+use tracing::{error, debug};
+use tracing_subscriber::prelude::*;
+use dotenvy::dotenv;
+use tracing::Level;
+use std::str::FromStr;
+use std::env;
 
 mod args {
     use std::path::PathBuf;
@@ -68,9 +73,42 @@ mod args {
     }
 }
 
+fn get_log_level(env_var: &str, default: Level) -> Level {
+    match std::env::var(env_var) {
+        Ok(level) => Level::from_str(&level).unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    dotenv().ok();
+let file_log_level = get_log_level("POOL_LOG_LEVEL_FILE", Level::INFO);
+let console_log_level = get_log_level("POOL_LOG_LEVEL_CONSOLE", Level::DEBUG);
+
+let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+    tracing_appender::rolling::Rotation::DAILY,
+    "logs",
+    "Pool.log",
+);
+
+tracing_subscriber::registry()
+    .with(
+        tracing_subscriber::fmt::layer()
+            .with_writer(file_appender)
+            .with_ansi(false)
+            .with_thread_ids(true)
+            .with_thread_names(true)
+            .with_file(true)
+            .with_line_number(true)
+            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(file_log_level))
+    )
+    .with(
+        tracing_subscriber::fmt::layer()
+            .with_writer(std::io::stdout)
+            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(console_log_level))
+    )
+    .init();
 
     let args = match args::Args::from_args() {
         Ok(cfg) => cfg,
@@ -82,13 +120,22 @@ async fn main() {
 
     let config_path = args.config_path.to_str().expect("Invalid config path");
 
+    if let Ok(env_tp_address) = env::var("POOL__TP_ADDRESS") {
+        debug!("Found POOL_TP_ADDRESS in environment: {}", env_tp_address);
+    }
     // Load config
-    let config: Configuration = match Config::builder()
+    let mut config: Configuration = match Config::builder()
         .add_source(File::new(config_path, FileFormat::Toml))
+        .add_source(Environment::with_prefix("POOL").separator("__"))
         .build()
     {
         Ok(settings) => match settings.try_deserialize::<Configuration>() {
-            Ok(c) => c,
+            Ok(c) => {
+                debug!("Configuration loaded successfully");
+                debug!("TP Address: {}", c.tp_address);
+                debug!("Full config: {:?}", c);
+                c
+            },
             Err(e) => {
                 error!("Failed to deserialize config: {}", e);
                 return;
@@ -99,5 +146,24 @@ async fn main() {
             return;
         }
     };
+
+    match (
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_TYPE"),
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_VALUE"),
+    ) {
+        (Ok(output_script_type), Ok(output_script_value)) => {
+            match config.coinbase_outputs.get_mut(0) {
+                Some(output) => {
+                    output.set_output_script_type(output_script_type);
+                    output.set_output_script_value(output_script_value);
+                    debug!("Overridden coinbase output: {:?}", output);
+                }
+                None => error!("coinbase_outputs is empty, cannot override values"),
+            }
+            debug!("Full config after override: {:?}", config);
+        }
+        _ => { /*  или ничего :) */ }
+    }
+
     let _ = PoolSv2::new(config).start().await;
 }

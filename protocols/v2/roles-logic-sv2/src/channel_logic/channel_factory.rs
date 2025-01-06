@@ -840,6 +840,22 @@ impl ChannelFactory {
         };
         match self.kind {
             ExtendedChannelKind::Pool => {
+                /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                    m.get_channel_id(),
+                    m.get_sequence_number(),
+                    m.get_job_id(),
+                    m.get_nonce(),
+                    m.get_n_time(),
+                    m.get_version(),
+                    hash,
+                    downstream_target.clone(),
+                    extranonce.to_vec(),
+                    user_identity,
+                ); */
+                info!("Calling share logging for POOL");
+                //shares_logger::log_share(share_log);
+            },
+            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
                     m.get_channel_id(),
                     m.get_sequence_number(),
@@ -852,11 +868,8 @@ impl ChannelFactory {
                     extranonce.to_vec(),
                     user_identity,
                 );
-                info!("Calling share logging for POOL");
+                info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
-            },
-            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
-                info!("Skipping share logging for PROXY");
             }
         }
         // ---- NOMIUM share_log injection ----
@@ -893,7 +906,7 @@ impl ChannelFactory {
                     .to_string(),
                 Share::Standard(_) => "unknown".to_string(),
             };
-            
+
             let block = shares_logger::models::BlockFound::prepare_block(
                 m.get_channel_id(),
                 hash_.as_hash().into_inner().to_vec(),

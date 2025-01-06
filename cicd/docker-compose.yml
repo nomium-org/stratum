@@ -1,34 +1,32 @@
 services:
-    clickhouse:
-        image: clickhouse:latest
-        container_name: clickhouse
-        environment:
-          - CLICKHOUSE_DB=mining
-          - CLICKHOUSE_USER=${CLICKHOUSE_USER}
-          - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-        restart: always
-        privileged: true
-        volumes:
-          - /var/log/clickhouse-server:/var/log/clickhouse-server
-        ports:
-          - 8123:8123
-        network_mode: host
-    
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
+        volumes:
+          - /var/log/pool:/app/logs
         environment:
           - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
           - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
+          - SHARES_LOGGER__CLICKHOUSE__URL=${CLICKHOUSE_URL}
+          - SHARES_LOGGER__CLICKHOUSE__USERNAME=${CLICKHOUSE_USER}
+          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=${CLICKHOUSE_PASSWORD}
         container_name: pool
         network_mode: host
  
     translator:
         image: ${NEXUS_URL}/rrp-translator:latest
         restart: always
+        volumes:
+          - /var/log/translator:/app/logs
         environment:
           - REDROCK_API_URL=${REDROCK_API_URL}
           - REDROCK_API_KEY=${REDROCK_API_KEY}
           - REDROCK_TIMEOUT_SECONDS=5
+          - SHARES_LOGGER__CLICKHOUSE__BATCH_FLUSH_INTERVAL_SECS=60
+          - SHARES_LOGGER__CLICKHOUSE__BATCH_SIZE=1000
+          - SHARES_LOGGER__PROCESSING__PRIMARY_CHANNEL_BUFFER_SIZE=10000
+          - SHARES_LOGGER__CLICKHOUSE__URL=${CLICKHOUSE_URL}
+          - SHARES_LOGGER__CLICKHOUSE__USERNAME=${CLICKHOUSE_USER}
+          - SHARES_LOGGER__CLICKHOUSE__PASSWORD=${CLICKHOUSE_PASSWORD}
         container_name: translator
         network_mode: host

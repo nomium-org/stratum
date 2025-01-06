@@ -1,3 +1,5 @@
+use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS, SHARES_RECEIVED, CONNECTION_ATTEMPTS, CONNECTION_FAILURES, CONNECTION_AUTH_FAILURES, CONNECTION_TIMEOUT_FAILURES};
+
 use crate::{
     downstream_sv1,
     error::ProxyResult,
@@ -114,6 +116,8 @@ impl Downstream {
         upstream_difficulty_config: Arc<Mutex<UpstreamDifficultyConfig>>,
         task_collector: Arc<Mutex<Vec<(AbortHandle, String)>>>,
     ) {
+        CONNECTION_ATTEMPTS.inc();
+
         let stream = std::sync::Arc::new(stream);
 
         // Reads and writes from Downstream SV1 Mining Device Client
@@ -270,14 +274,24 @@ impl Downstream {
         let notify_task = tokio::task::spawn(async move {
             let timeout_timer = std::time::Instant::now();
             let mut first_sent = false;
+
+            let mut connection_counted = false;
+
             loop {
                 let is_a = match downstream.safe_lock(|d| !d.authorized_names.is_empty()) {
                     Ok(is_a) => is_a,
                     Err(_e) => {
+                        CONNECTION_FAILURES.inc();
                         debug!("\nDownstream: Poison Lock - authorized_names\n");
                         break;
                     }
                 };
+
+                if is_a && !connection_counted {
+                    ACTIVE_CONNECTIONS.inc();
+                    connection_counted = true;
+                }
+
                 if is_a && !first_sent && last_notify.is_some() {
                     let target = handle_result!(
                         tx_status_notify,
@@ -337,6 +351,8 @@ impl Downstream {
                     // timeout connection if miner does not send the authorize message after sending
                     // a subscribe
                     if timeout_timer.elapsed().as_secs() > SUBSCRIBE_TIMEOUT_SECS {
+                        CONNECTION_TIMEOUT_FAILURES.inc();
+                        CONNECTION_FAILURES.inc();
                         debug!(
                             "Downstream: miner.subscribe/miner.authorize TIMOUT for {}",
                             &host
@@ -346,6 +362,11 @@ impl Downstream {
                     task::sleep(std::time::Duration::from_secs(1)).await;
                 }
             }
+
+            if connection_counted {
+                ACTIVE_CONNECTIONS.dec();
+            }
+
             let _ = Self::remove_miner_hashrate_from_channel(self_);
             kill(&tx_shutdown).await;
             warn!(
@@ -405,6 +426,7 @@ impl Downstream {
                         .await;
                     }
                     Err(e) => {
+                        CONNECTION_FAILURES.inc();
                         tracing::error!("Failed to create a new downstream connection: {:?}", e);
                     }
                 }
@@ -533,7 +555,7 @@ impl IsServer<'static> for Downstream {
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
         let worker_name = request.name.to_string();
-        
+
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
 
@@ -562,7 +584,7 @@ impl IsServer<'static> for Downstream {
                     .timeout(std::time::Duration::from_secs(timeout_seconds))
                     .build()
                     .unwrap();
-    
+
                 let result = client
                     .post(&api_url)
                     .header("accept", "text/plain")
@@ -574,7 +596,7 @@ impl IsServer<'static> for Downstream {
                     }))
                     .send()
                     .await;
-    
+
                 match result {
                     Ok(response) => {
                         if let Ok(json) = response.json::<serde_json::Value>().await {
@@ -583,10 +605,10 @@ impl IsServer<'static> for Downstream {
                                     if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
 
                                         shares_logger::worker_name_store::store_worker(
-                                            worker_name.clone(), 
+                                            worker_name.clone(),
                                             worker_id.to_string()
                                         );
-                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}", 
+                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}",
                                             worker_name,
                                             shares_logger::worker_name_store::get_worker_identity(&worker_name)
                                         );
@@ -595,9 +617,11 @@ impl IsServer<'static> for Downstream {
                                 }
                             }
                         }
+                        CONNECTION_AUTH_FAILURES.inc();
                         false
                     }
                     Err(e) => {
+                        CONNECTION_AUTH_FAILURES.inc();
                         tracing::error!("Auth request failed: {:?}", e);
                         false
                     }
@@ -613,8 +637,10 @@ impl IsServer<'static> for Downstream {
         debug!("Down: Handling mining.submit: {:?}", &request);
 
         // TODO: Check if receiving valid shares by adding diff field to Downstream
+        SHARES_RECEIVED.inc();
 
         if request.job_id == self.last_job_id {
+            SHARES_VALID_JOBID.inc();
             let to_send = SubmitShareWithChannelId {
                 channel_id: self.connection_id,
                 share: request.clone(),

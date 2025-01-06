@@ -1,3 +1,5 @@
+pub mod metrics;
+
 use async_channel::{bounded, unbounded};
 use futures::FutureExt;
 use rand::Rng;
