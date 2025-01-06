@@ -2,6 +2,9 @@ use lazy_static::lazy_static;
 use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge, Encoder};
 use std::thread;
 use tiny_http::{Server, Response, Header};
+use dotenvy::dotenv;
+use std::env;
+use tracing::error;
 
 lazy_static! {
     pub static ref SHARES_RECEIVED: IntCounter =
@@ -44,20 +47,35 @@ lazy_static! {
 
 pub fn start_metrics_server() {
     thread::spawn(|| {
-        let server = Server::http("0.0.0.0:9184").unwrap();
-        
-        for request in server.incoming_requests() {
-            let encoder = prometheus::TextEncoder::new();
-            let mut buffer = Vec::new();
-            encoder.encode(&prometheus::gather(), &mut buffer).unwrap();
-            
-            let content_type = Header::from_bytes(
-                "Content-Type",
-                "text/plain"
-            ).unwrap();
-            
-            let response = Response::from_data(buffer).with_header(content_type);
-            let _ = request.respond(response);
+        dotenv().ok();
+
+        let metrics_ip = env::var("TPROXY_METRICS_IP").unwrap_or_else(|_| "0.0.0.0".to_string());
+        let metrics_port = env::var("TPROXY_METRICS_PORT").unwrap_or_else(|_| "9184".to_string());
+
+        let metrics_address = format!("{}:{}", metrics_ip, metrics_port);
+
+        match Server::http(&metrics_address) {
+            Ok(server) => {
+                for request in server.incoming_requests() {
+                    let encoder = prometheus::TextEncoder::new();
+                    let mut buffer = Vec::new();
+
+                    if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
+                        error!("Failed to encode metrics: {}", e);
+                        continue;
+                    }
+
+                    let content_type = Header::from_bytes("Content-Type", "text/plain").unwrap();
+                    let response = Response::from_data(buffer).with_header(content_type);
+
+                    if let Err(e) = request.respond(response) {
+                        error!("Failed to send metrics response: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to start metrics server: {}", e);
+            }
         }
     });
 }
