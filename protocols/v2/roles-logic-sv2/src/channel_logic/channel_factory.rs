@@ -842,7 +842,7 @@ impl ChannelFactory {
             ExtendedChannelKind::Pool => {
                 /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
                     m.get_channel_id(),
-                    1,
+                    m.get_sequence_number(),
                     m.get_job_id(),
                     m.get_nonce(),
                     m.get_n_time(),
@@ -858,7 +858,7 @@ impl ChannelFactory {
             ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
                     m.get_channel_id(),
-                    2,
+                    m.get_sequence_number(),
                     m.get_job_id(),
                     m.get_nonce(),
                     m.get_n_time(),
