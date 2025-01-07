@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS blocks (
     channel_id UInt32,
     block_hash String,
     ntime UInt32,
-    found_at DateTime64(3) DEFAULT now64(3)
+    found_at DateTime64(3) DEFAULT now64(3),
+    is_rewards_calculated UInt8 DEFAULT 0
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(found_at)
 ORDER BY (worker_id, found_at, ntime)
