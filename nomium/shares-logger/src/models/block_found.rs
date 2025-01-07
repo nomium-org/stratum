@@ -8,7 +8,6 @@ pub struct BlockFound {
     pub channel_id: u32,
     pub block_hash: Vec<u8>,
     pub ntime: u32,
-    pub user_identity: String,
     pub worker_id: String,
     pub account_name: String,
 }
@@ -48,7 +47,6 @@ impl BlockFound {
             channel_id,
             block_hash,
             ntime,
-            user_identity,
             worker_id,
             account_name,
         }
