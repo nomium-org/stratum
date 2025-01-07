@@ -8,18 +8,20 @@ pub struct BlockFound {
     pub channel_id: u32,
     pub block_hash: Vec<u8>,
     pub ntime: u32,
-    pub user_identity: String,
     pub worker_id: String,
+    pub account_name: String,
 }
 
 impl BlockFound {
     pub fn prepare_block(
         channel_id: u32,
-        block_hash: Vec<u8>,
+        mut block_hash: Vec<u8>,
         ntime: u32,
         user_identity_json: String,
     ) -> Self {
         info!("Preparing block with user_identity_json: {}", user_identity_json);
+
+        block_hash.reverse();
         
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
@@ -37,14 +39,16 @@ impl BlockFound {
             .unwrap_or("unknown")
             .to_string();
 
+        let account_name = user_identity.split('.').next().unwrap_or_default().to_string();
+
         info!("Block prepared with worker_id: {}", worker_id);
 
         BlockFound {
             channel_id,
             block_hash,
             ntime,
-            user_identity,
             worker_id,
+            account_name,
         }
     }
 }
