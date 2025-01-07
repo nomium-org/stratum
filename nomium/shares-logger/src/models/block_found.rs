@@ -16,11 +16,13 @@ pub struct BlockFound {
 impl BlockFound {
     pub fn prepare_block(
         channel_id: u32,
-        block_hash: Vec<u8>,
+        mut block_hash: Vec<u8>,
         ntime: u32,
         user_identity_json: String,
     ) -> Self {
         info!("Preparing block with user_identity_json: {}", user_identity_json);
+
+        block_hash.reverse();
         
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
