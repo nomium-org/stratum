@@ -1,5 +1,4 @@
 CREATE TABLE IF NOT EXISTS blocks (
-    user_identity String,
     account_name String,
     worker_id String,
     channel_id UInt32,
