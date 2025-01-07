@@ -10,6 +10,7 @@ pub struct BlockFound {
     pub ntime: u32,
     pub user_identity: String,
     pub worker_id: String,
+    pub account_name: String,
 }
 
 impl BlockFound {
@@ -37,6 +38,8 @@ impl BlockFound {
             .unwrap_or("unknown")
             .to_string();
 
+        let account_name = user_identity.split('.').next().unwrap_or_default().to_string();
+
         info!("Block prepared with worker_id: {}", worker_id);
 
         BlockFound {
@@ -45,6 +48,7 @@ impl BlockFound {
             ntime,
             user_identity,
             worker_id,
+            account_name,
         }
     }
 }

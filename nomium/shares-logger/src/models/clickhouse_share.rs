@@ -16,6 +16,7 @@ pub struct ClickhouseShare {
     pub difficulty: f64,
     pub user_identity: String,
     pub worker_id: String,
+    pub account_name: String,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -33,6 +34,8 @@ impl From<ShareLog> for ClickhouseShare {
                 acc
             });
 
+        let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();    
+
         Self {
             channel_id: share.channel_id,
             sequence_number: share.sequence_number,
@@ -46,6 +49,7 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             user_identity: share.user_identity,
             worker_id: share.worker_id,
+            account_name: account_name,
         }
     }
 }
