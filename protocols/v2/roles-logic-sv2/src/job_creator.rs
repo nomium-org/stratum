@@ -124,8 +124,16 @@ impl JobsCreators {
                     .get(&(prev_hash.template_id + 1))
                     .copied()
             }
+            n => {
+                tracing::error!(
+                    "Invalid state: found {} templates with same template_id: {}. Templates: {:#?}",
+                    n, prev_hash.template_id, template
+                );
+                self.reset_new_templates(None);
+                None
+            }
             // TODO how many templates can we have at max
-            _ => todo!("{:#?}", template.len()),
+            //_ => todo!("{:#?}", template.len()),
         }
     }
 
