@@ -102,11 +102,18 @@ impl PoolSv2 {
                         ).await {
                             Ok(_) => {
                                 info!("Successfully reconnected to TP");
-                                break; // Выходим из внутреннего loop и продолжаем главный цикл
+                                break; 
                             }
                             Err(e) => {
-                                error!("Failed to reconnect to TP: {}, retrying in 5 seconds...", e);
-                                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                                let tp_reconnect_timeout = match std::env::var("POOL_TP_RECONNECT_TIMEOUT") {
+                                    Ok(timeout_str) => timeout_str.parse::<u64>().unwrap_or(5),
+                                    Err(_) => {
+                                        warn!("POOL_TP_RECONNECT_TIMEOUT not found, use default 5 seconds...");
+                                        5
+                                    }
+                                };
+                                error!("Failed to reconnect to TP: {}, retrying in {} seconds", e, tp_reconnect_timeout);
+                                tokio::time::sleep(std::time::Duration::from_secs(tp_reconnect_timeout)).await;
                                 continue;
                             }
                         }
