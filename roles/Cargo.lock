@@ -3028,6 +3028,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mining_sv2",
+ "nomium-prometheus",
  "once_cell",
  "parking_lot",
  "primitive-types",

@@ -51,6 +51,26 @@ lazy_static! {
         register_int_counter!("chfact_shares_logged_total", 
             "Total number of shares sent to logger").unwrap();
 
+    pub static ref SHALOG_SHARES_RECEIVED_TOTAL: IntCounter =
+        register_int_counter!("shalog_shares_received_total", 
+            "Total number of shares received by shares-logger").unwrap();
+        
+    pub static ref SHALOG_PRIMARY_CHANNEL_SHARES_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_channel_shares_total", 
+            "Total number of shares sent through primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_CHANNEL_SHARES_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_channel_shares_total", 
+            "Total number of shares sent through backup channel").unwrap();
+        
+    pub static ref SHALOG_PRIMARY_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_stored_total", 
+            "Total number of shares stored from primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_stored_total", 
+            "Total number of shares stored from backup channel").unwrap();
+
 }
 
 pub fn start_metrics_server() {
