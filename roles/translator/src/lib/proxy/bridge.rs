@@ -1,4 +1,4 @@
-use crate::metrics::{SHARES_UPSTREAM_TARGET_MEET, SHARES_DOWNSTREAM_TARGET_MEET};
+use crate::metrics::{SHARES_UPSTREAM_TARGET_MEET, SHARES_DOWNSTREAM_TARGET_MEET, TPROXY_SHARES_REJECTED_TOTAL};
 use async_channel::{Receiver, Sender};
 use roles_logic_sv2::{
     channel_logic::channel_factory::{ExtendedChannelKind, ProxyExtendedChannelFactory, Share},
@@ -250,6 +250,7 @@ impl Bridge {
                     "Submit share error {:?}",
                     std::str::from_utf8(&e.error_code.to_vec()[..])
                 );
+                TPROXY_SHARES_REJECTED_TOTAL.inc();
             }
             Ok(Ok(OnNewShare::SendSubmitShareUpstream((share, _)))) => {
                 info!("SHARE MEETS UPSTREAM TARGET");

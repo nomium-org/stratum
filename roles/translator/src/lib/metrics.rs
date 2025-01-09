@@ -23,6 +23,10 @@ lazy_static! {
         register_int_counter!("mining_shares_downstream_target_meet_total", 
             "Shares that meet downstream (miner) target").unwrap();
 
+    pub static ref TPROXY_SHARES_REJECTED_TOTAL: IntCounter =
+        register_int_counter!("TPROXY_shares_rejected_total", 
+            "Total number of rejected shares").unwrap();
+
     pub static ref ACTIVE_CONNECTIONS: IntGauge =
         register_int_gauge!("mining_active_connections", 
             "Number of active miner connections").unwrap();
