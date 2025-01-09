@@ -165,7 +165,6 @@ tracing_subscriber::registry()
         _ => { /*  или ничего :) */ }
     }
 
-    //let _ = PoolSv2::new(config).start().await;
     let pool = PoolSv2::new(config);
 
     use tokio::signal::unix::{signal, SignalKind};

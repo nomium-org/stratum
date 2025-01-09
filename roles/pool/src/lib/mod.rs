@@ -81,12 +81,6 @@ impl PoolSv2 {
                     );
                     break Ok(());
                 }
-                /*
-                status::State::TemplateProviderShutdown(err) => {
-                    error!("SHUTDOWN from Upstream: {}\nTry to reconnecting or connecting to a new upstream", err);
-                    break Ok(());
-                }
-                */
                 status::State::TemplateProviderShutdown(err) => {
                     error!("TP connection lost: {}, attempting reconnection...", err);
                     loop {
