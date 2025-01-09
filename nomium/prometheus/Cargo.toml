@@ -1,0 +1,12 @@
+[package]
+name = "nomium-prometheus"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = "1.5"
+prometheus = "0.13"
+prometheus-static-metric = "0.5"
+tiny_http = "0.12"
+tracing = { version = "0.1" }
+dotenvy = "0.15"

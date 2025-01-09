@@ -1,4 +1,4 @@
-pub mod metrics;
+pub use nomium_prometheus as metrics;
 
 use async_channel::{bounded, unbounded};
 use futures::FutureExt;
