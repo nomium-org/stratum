@@ -2658,6 +2658,7 @@ dependencies = [
  "job_declaration_sv2",
  "mining_sv2",
  "nohash-hasher",
+ "nomium-prometheus",
  "shares-logger",
  "siphasher",
  "stratum-common",

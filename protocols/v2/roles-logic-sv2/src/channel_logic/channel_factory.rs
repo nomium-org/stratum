@@ -870,6 +870,7 @@ impl ChannelFactory {
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
+                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc();
             }
         }
         // ---- NOMIUM share_log injection ----

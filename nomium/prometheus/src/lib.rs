@@ -24,7 +24,7 @@ lazy_static! {
             "Shares that meet downstream (miner) target").unwrap();
 
     pub static ref TPROXY_SHARES_REJECTED_TOTAL: IntCounter =
-        register_int_counter!("TPROXY_shares_rejected_total", 
+        register_int_counter!("tproxy_shares_rejected_total", 
             "Total number of rejected shares").unwrap();
 
     pub static ref ACTIVE_CONNECTIONS: IntGauge =
@@ -46,6 +46,10 @@ lazy_static! {
     pub static ref CONNECTION_TIMEOUT_FAILURES: IntCounter =
         register_int_counter!("mining_timeout_failures_total",
             "Number of connection timeouts").unwrap();
+
+    pub static ref CHFACT_SHARES_LOGGED_TOTAL: IntCounter =
+        register_int_counter!("chfact_shares_logged_total", 
+            "Total number of shares sent to logger").unwrap();
 
 }
 
