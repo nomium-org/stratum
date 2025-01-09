@@ -63,13 +63,21 @@ lazy_static! {
         register_int_counter!("shalog_backup_channel_shares_total", 
             "Total number of shares sent through backup channel").unwrap();
         
-    pub static ref SHALOG_PRIMARY_STORED_TOTAL: IntCounter =
-        register_int_counter!("shalog_primary_stored_total", 
+    pub static ref SHALOG_PRIMARY_TRY_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_try_stored_total", 
             "Total number of shares stored from primary channel").unwrap();
         
-    pub static ref SHALOG_BACKUP_STORED_TOTAL: IntCounter =
-        register_int_counter!("shalog_backup_stored_total", 
+    pub static ref SHALOG_BACKUP_TRY_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_try_stored_total", 
             "Total number of shares stored from backup channel").unwrap();
+
+    pub static ref SHALOG_PRIMARY_STORE_FAILED_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_store_failed_total", 
+            "Total number of shares failed to store from primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_STORE_FAILED_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_store_failed_total", 
+            "Total number of shares failed to store from backup channel").unwrap();
 
 }
 
