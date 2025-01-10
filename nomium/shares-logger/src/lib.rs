@@ -21,6 +21,16 @@ use std::time::Instant;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use nomium_prometheus::{
+    SHALOG_SHARES_RECEIVED_TOTAL,
+    SHALOG_PRIMARY_CHANNEL_SHARES_TOTAL, 
+    SHALOG_BACKUP_CHANNEL_SHARES_TOTAL,
+    SHALOG_PRIMARY_TRY_STORED_TOTAL,
+    SHALOG_BACKUP_TRY_STORED_TOTAL,
+    SHALOG_PRIMARY_STORE_FAILED_TOTAL,
+    SHALOG_BACKUP_STORE_FAILED_TOTAL
+};
+
 lazy_static! {
     static ref GLOBAL_LOGGER: ShareLogger<ShareLog> = {
         let storage = ClickhouseStorage::new()
@@ -107,9 +117,14 @@ impl<T: Send + Sync + Clone + Serialize + DeserializeOwned + 'static> ShareLogge
 
 impl<T: Send + Sync + Clone + Serialize + DeserializeOwned + 'static> ShareLogger<T> {
     pub fn log_share(&self, share: T) {
+        SHALOG_SHARES_RECEIVED_TOTAL.inc();
+        
         match self.primary_tx.try_send(share.clone()) {
-            Ok(_) => (),
+            Ok(_) => {
+                SHALOG_PRIMARY_CHANNEL_SHARES_TOTAL.inc();
+            },
             Err(TrySendError::Full(share)) | Err(TrySendError::Closed(share)) => {
+                SHALOG_BACKUP_CHANNEL_SHARES_TOTAL.inc();
                 if let Err(e) = self.backup_tx.send(share) {
                     info!("Failed to send share to backup logger: {}", e);
                 }
@@ -136,7 +151,9 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
         tokio::select! {
             Some(share) = primary_rx.recv() => {
                 info!("Processing share from primary channel");
+                SHALOG_PRIMARY_TRY_STORED_TOTAL.inc();
                 if let Err(e) = storage.lock().await.store_share(share).await {
+                    SHALOG_PRIMARY_STORE_FAILED_TOTAL.inc();
                     info!("Failed to store share: {}", e);
                 }
             }
@@ -146,7 +163,10 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
                     backup_shares.push(share);
                 }
                 if !backup_shares.is_empty() {
+                    let shares_count = backup_shares.len() as u64;
+                    SHALOG_BACKUP_TRY_STORED_TOTAL.inc_by(shares_count);
                     if let Err(e) = storage.lock().await.store_batch(backup_shares).await {
+                        SHALOG_BACKUP_STORE_FAILED_TOTAL.inc_by(shares_count);
                         info!("Failed to store backup shares: {}", e);
                     }
                 }

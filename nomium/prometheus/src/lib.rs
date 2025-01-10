@@ -23,6 +23,10 @@ lazy_static! {
         register_int_counter!("mining_shares_downstream_target_meet_total", 
             "Shares that meet downstream (miner) target").unwrap();
 
+    pub static ref TPROXY_SHARES_REJECTED_TOTAL: IntCounter =
+        register_int_counter!("tproxy_shares_rejected_total", 
+            "Total number of rejected shares").unwrap();
+
     pub static ref ACTIVE_CONNECTIONS: IntGauge =
         register_int_gauge!("mining_active_connections", 
             "Number of active miner connections").unwrap();
@@ -42,6 +46,38 @@ lazy_static! {
     pub static ref CONNECTION_TIMEOUT_FAILURES: IntCounter =
         register_int_counter!("mining_timeout_failures_total",
             "Number of connection timeouts").unwrap();
+
+    pub static ref CHFACT_SHARES_LOGGED_TOTAL: IntCounter =
+        register_int_counter!("chfact_shares_logged_total", 
+            "Total number of shares sent to logger").unwrap();
+
+    pub static ref SHALOG_SHARES_RECEIVED_TOTAL: IntCounter =
+        register_int_counter!("shalog_shares_received_total", 
+            "Total number of shares received by shares-logger").unwrap();
+        
+    pub static ref SHALOG_PRIMARY_CHANNEL_SHARES_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_channel_shares_total", 
+            "Total number of shares sent through primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_CHANNEL_SHARES_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_channel_shares_total", 
+            "Total number of shares sent through backup channel").unwrap();
+        
+    pub static ref SHALOG_PRIMARY_TRY_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_try_stored_total", 
+            "Total number of shares stored from primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_TRY_STORED_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_try_stored_total", 
+            "Total number of shares stored from backup channel").unwrap();
+
+    pub static ref SHALOG_PRIMARY_STORE_FAILED_TOTAL: IntCounter =
+        register_int_counter!("shalog_primary_store_failed_total", 
+            "Total number of shares failed to store from primary channel").unwrap();
+        
+    pub static ref SHALOG_BACKUP_STORE_FAILED_TOTAL: IntCounter =
+        register_int_counter!("shalog_backup_store_failed_total", 
+            "Total number of shares failed to store from backup channel").unwrap();
 
 }
 

@@ -28,6 +28,7 @@ chacha20poly1305 = { version = "0.10.1"}
 nohash-hasher = "0.2.0"
 siphasher = "1"
 shares-logger = { path = "../../../nomium/shares-logger" }
+nomium-prometheus = { path = "../../../nomium/prometheus" }
 
 [dev-dependencies]
 quickcheck = "1.0.3"

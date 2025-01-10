@@ -2096,6 +2096,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nomium-prometheus"
+version = "0.1.0"
+dependencies = [
+ "dotenvy",
+ "lazy_static",
+ "prometheus",
+ "prometheus-static-metric",
+ "tiny_http",
+ "tracing",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2646,6 +2658,7 @@ dependencies = [
  "job_declaration_sv2",
  "mining_sv2",
  "nohash-hasher",
+ "nomium-prometheus",
  "shares-logger",
  "siphasher",
  "stratum-common",
@@ -3015,6 +3028,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mining_sv2",
+ "nomium-prometheus",
  "once_cell",
  "parking_lot",
  "primitive-types",
@@ -3539,9 +3553,8 @@ dependencies = [
  "key-utils",
  "lazy_static",
  "network_helpers_sv2",
+ "nomium-prometheus",
  "once_cell",
- "prometheus",
- "prometheus-static-metric",
  "rand",
  "reqwest",
  "roles_logic_sv2",
@@ -3551,7 +3564,6 @@ dependencies = [
  "shares-logger",
  "stratum-common",
  "sv1_api",
- "tiny_http",
  "tokio",
  "tokio-util",
  "tracing",
