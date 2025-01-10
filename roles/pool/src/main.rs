@@ -165,5 +165,25 @@ tracing_subscriber::registry()
         _ => { /*  или ничего :) */ }
     }
 
-    let _ = PoolSv2::new(config).start().await;
+    let pool = PoolSv2::new(config);
+
+    use tokio::signal::unix::{signal, SignalKind};
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+
+    tokio::select! {
+        _ = sigterm.recv() => {
+            error!("Received SIGTERM signal, starting graceful shutdown");
+        }
+        _ = sigint.recv() => {
+            error!("Received SIGINT signal, starting graceful shutdown");
+        }
+        result = pool.start() => {
+            if let Err(e) = result {
+                error!("Pool error: {:?}", e);
+            }
+        }
+    }
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 }

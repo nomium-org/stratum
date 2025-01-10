@@ -34,10 +34,10 @@ impl PoolSv2 {
         let tp_authority_public_key = config.tp_authority_public_key;
         TemplateRx::connect(
             config.tp_address.parse().unwrap(),
-            s_new_t,
-            s_prev_hash,
-            r_solution,
-            r_message_recv_signal,
+            s_new_t.clone(),
+            s_prev_hash.clone(),
+            r_solution.clone(),
+            r_message_recv_signal.clone(),
             status::Sender::Upstream(status_tx.clone()),
             coinbase_output_len,
             tp_authority_public_key,
@@ -49,7 +49,7 @@ impl PoolSv2 {
             r_prev_hash,
             s_solution,
             s_message_recv_signal,
-            status::Sender::DownstreamListener(status_tx),
+            status::Sender::DownstreamListener(status_tx.clone()),
         );
 
         // Start the error handling loop
@@ -82,8 +82,37 @@ impl PoolSv2 {
                     break Ok(());
                 }
                 status::State::TemplateProviderShutdown(err) => {
-                    error!("SHUTDOWN from Upstream: {}\nTry to reconnecting or connecting to a new upstream", err);
-                    break Ok(());
+                    error!("TP connection lost: {}, attempting reconnection...", err);
+                    loop {
+                        match TemplateRx::connect(
+                            config.tp_address.parse().unwrap(),
+                            s_new_t.clone(),
+                            s_prev_hash.clone(),
+                            r_solution.clone(),
+                            r_message_recv_signal.clone(),
+                            status::Sender::Upstream(status_tx.clone()),
+                            coinbase_output_len,
+                            tp_authority_public_key,
+                        ).await {
+                            Ok(_) => {
+                                info!("Successfully reconnected to TP");
+                                break; 
+                            }
+                            Err(e) => {
+                                let tp_reconnect_timeout = match std::env::var("POOL_TP_RECONNECT_TIMEOUT") {
+                                    Ok(timeout_str) => timeout_str.parse::<u64>().unwrap_or(5),
+                                    Err(_) => {
+                                        warn!("POOL_TP_RECONNECT_TIMEOUT not found, use default 5 seconds...");
+                                        5
+                                    }
+                                };
+                                error!("Failed to reconnect to TP: {}, retrying in {} seconds", e, tp_reconnect_timeout);
+                                tokio::time::sleep(std::time::Duration::from_secs(tp_reconnect_timeout)).await;
+                                continue;
+                            }
+                        }
+                    }
+                    continue;
                 }
                 status::State::Healthy(msg) => {
                     info!("HEALTHY message: {}", msg);
