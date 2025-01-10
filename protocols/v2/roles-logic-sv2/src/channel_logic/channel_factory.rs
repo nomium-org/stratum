@@ -19,7 +19,6 @@ use std::{collections::HashMap, convert::TryInto, sync::Arc};
 use template_distribution_sv2::{NewTemplate, SetNewPrevHash as SetNewPrevHashFromTp};
 
 use tracing::{debug, error, info, trace, warn};
-use std::backtrace::Backtrace;
 
 use stratum_common::{
     bitcoin,
@@ -29,6 +28,8 @@ use stratum_common::{
         TxOut,
     },
 };
+
+use shares_logger::models::ShareStatus;
 
 /// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`)
 /// fields
@@ -831,12 +832,24 @@ impl ChannelFactory {
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
 
+
+
         // NOMIUM share_log injection ----
         let user_identity = match &m {
             Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
                 .unwrap_or("invalid_utf8")
                 .to_string(),
             Share::Standard(_) => panic!("Expected Extended share, got Standard"),
+        };
+        let share_hash: Target = hash.into(); //todo - move to shares_logger
+        let share_status = if share_hash <= bitcoin_target {
+            ShareStatus::NetworkValid
+        } else if share_hash <= upstream_target {
+            ShareStatus::PoolValid
+        } else if share_hash <= downstream_target { 
+            ShareStatus::MinerValid
+        } else {
+            ShareStatus::Invalid
         };
         match self.kind {
             ExtendedChannelKind::Pool => {
@@ -867,6 +880,7 @@ impl ChannelFactory {
                     downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
+                    share_status,
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
