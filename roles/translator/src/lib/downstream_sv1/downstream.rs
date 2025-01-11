@@ -592,7 +592,7 @@ impl IsServer<'static> for Downstream {
                     .header("Content-Type", "application/json")
                     .json(&serde_json::json!({
                         "accountName": worker_name.split('.').next().unwrap_or(""),
-                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("0").parse::<i32>().unwrap_or(0)
+                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("0").to_string()
                     }))
                     .send()
                     .await;
