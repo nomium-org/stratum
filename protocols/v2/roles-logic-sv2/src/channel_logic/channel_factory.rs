@@ -841,7 +841,7 @@ impl ChannelFactory {
                 .to_string(),
             Share::Standard(_) => panic!("Expected Extended share, got Standard"),
         };
-        let share_hash: Target = hash.into(); //todo - move to shares_logger
+        let share_hash: Target = hash.into(); //todo (?) - move to shares_logger (?)
         let share_status = if share_hash <= bitcoin_target {
             ShareStatus::NetworkValid
         } else if share_hash <= upstream_target {
