@@ -591,8 +591,8 @@ impl IsServer<'static> for Downstream {
                     .header("X-Api-Key", api_key)
                     .header("Content-Type", "application/json")
                     .json(&serde_json::json!({
-                        "accountName": worker_name.split('.').next().unwrap_or(""),
-                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("0").to_string()
+                        "accountName": worker_name.split('.').next().unwrap_or("").to_string(),
+                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("").to_string()
                     }))
                     .send()
                     .await;
