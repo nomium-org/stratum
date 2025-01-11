@@ -17,7 +17,6 @@ impl ShareProcessor {
         ntime: u32,
         version: u32,
         hash: [u8; 32],
-        downstream_target: Target,
         extranonce: Vec<u8>,
         user_identity_json: String,
         share_status: ShareStatus,

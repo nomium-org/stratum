@@ -861,7 +861,6 @@ impl ChannelFactory {
                     m.get_n_time(),
                     m.get_version(),
                     hash,
-                    downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
                 ); */
@@ -877,7 +876,6 @@ impl ChannelFactory {
                     m.get_n_time(),
                     m.get_version(),
                     hash,
-                    downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
                     share_status,
