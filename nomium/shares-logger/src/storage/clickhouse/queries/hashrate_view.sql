@@ -6,7 +6,7 @@ POPULATE
 AS
 SELECT
     worker_id,
-    toStartOfMinute(timestamp) AS period_start,
+    toStartOfMinute(timestamp, 'UTC') AS period_start,
     count() AS share_count,
     min(difficulty) * count() * pow(2, 32) AS total_hashes,
     sum(CASE WHEN share_status = 0 THEN 1 ELSE 0 END) AS refused_shards,

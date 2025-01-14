@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS shares (
     extranonce String,
     difficulty Float64,
     channel_id UInt32,
-    timestamp DateTime64(3) DEFAULT now64(3)
+    timestamp DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC')
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
 ORDER BY (worker_id, timestamp, ntime)
