@@ -1,4 +1,9 @@
-use crate::metrics::{SHARES_UPSTREAM_TARGET_MEET, SHARES_DOWNSTREAM_TARGET_MEET, TPROXY_SHARES_REJECTED_TOTAL};
+use crate::metrics::{
+    SHARES_UPSTREAM_TARGET_MEET, 
+    SHARES_DOWNSTREAM_TARGET_MEET, 
+    TPROXY_SHARES_REJECTED_TOTAL,
+    SHRT_FN_TRANSLATE_SUBMIT_REFUSED
+};
 use async_channel::{Receiver, Sender};
 use roles_logic_sv2::{
     channel_logic::channel_factory::{ExtendedChannelKind, ProxyExtendedChannelFactory, Share},
@@ -299,7 +304,10 @@ impl Bridge {
             // regarding version masking see https://github.com/slushpool/stratumprotocol/blob/master/stratum-extensions.mediawiki#changes-in-request-miningsubmit
             (Some(vb), Some(mask)) => (last_version & !mask.0) | (vb.0 & mask.0),
             (None, None) => last_version,
-            _ => return Err(Error::V1Protocol(v1::error::Error::InvalidSubmission)),
+            _ => {
+                SHRT_FN_TRANSLATE_SUBMIT_REFUSED.inc();
+                return Err(Error::V1Protocol(v1::error::Error::InvalidSubmission));
+            }
         };
         let mining_device_extranonce: Vec<u8> = sv1_submit.extra_nonce2.into();
         let extranonce2 = mining_device_extranonce;
