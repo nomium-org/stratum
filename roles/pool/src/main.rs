@@ -9,6 +9,7 @@ use dotenvy::dotenv;
 use tracing::Level;
 use std::str::FromStr;
 use std::env;
+use tokio::{signal, select};
 
 mod args {
     use std::path::PathBuf;
@@ -167,16 +168,9 @@ tracing_subscriber::registry()
 
     let pool = PoolSv2::new(config);
 
-    use tokio::signal::unix::{signal, SignalKind};
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
-
-    tokio::select! {
-        _ = sigterm.recv() => {
-            error!("Received SIGTERM signal, starting graceful shutdown");
-        }
-        _ = sigint.recv() => {
-            error!("Received SIGINT signal, starting graceful shutdown");
+    select! {
+        _ = signal::ctrl_c() => {
+            error!("Received Ctrl+C signal, starting graceful shutdown");
         }
         result = pool.start() => {
             if let Err(e) = result {

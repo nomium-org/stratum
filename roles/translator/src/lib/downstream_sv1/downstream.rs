@@ -587,12 +587,11 @@ impl IsServer<'static> for Downstream {
 
                 let result = client
                     .post(&api_url)
-                    .header("accept", "text/plain")
                     .header("X-Api-Key", api_key)
                     .header("Content-Type", "application/json")
                     .json(&serde_json::json!({
                         "accountName": worker_name.split('.').next().unwrap_or("").to_string(),
-                        "workerNumber": worker_name.split('.').nth(1).unwrap_or("").to_string()
+                        "workerName": worker_name.split('.').nth(1).unwrap_or("").to_string()
                     }))
                     .send()
                     .await;
