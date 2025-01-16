@@ -9,3 +9,8 @@ batch_flush_interval_secs = 5
 [processing]
 primary_channel_buffer_size = 10000
 backup_check_interval_secs = 1
+
+[retry]
+max_retries = 100500000
+initial_delay_ms = 100
+max_delay_ms = 5000

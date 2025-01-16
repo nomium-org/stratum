@@ -7,6 +7,23 @@ use log::info;
 static INIT: Once = Once::new();
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct RetrySettings {
+    pub max_retries: u32,
+    pub initial_delay_ms: u64,
+    pub max_delay_ms: u64,
+}
+
+impl Default for RetrySettings {
+    fn default() -> Self {
+        Self {
+            max_retries: 100500000,
+            initial_delay_ms: 100,
+            max_delay_ms: 5000,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct ClickhouseSettings {
     pub url: String,
     pub database: String,
@@ -26,6 +43,8 @@ pub struct ProcessingSettings {
 pub struct Settings {
     pub clickhouse: ClickhouseSettings,
     pub processing: ProcessingSettings,
+    #[serde(default)]
+    pub retry: RetrySettings,
 }
 
 impl Settings {
