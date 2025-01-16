@@ -1,18 +1,7 @@
--- 7 января 2025
---
-ALTER TABLE blocks
-ADD COLUMN is_rewards_calculated Bool DEFAULT false;
+-- 16 января 2025 миграция
 
---
---
-ALTER TABLE shares ADD COLUMN account_name String;
-ALTER TABLE blocks ADD COLUMN account_name String;
-
---
--- 
-ALTER TABLE shares DROP COLUMN user_identity;
-ALTER TABLE blocks DROP COLUMN user_identity;
-
+ALTER TABLE shares
+ADD COLUMN IF NOT EXISTS is_pps_reward_calculated Bool DEFAULT false;
 
 -- 14 января 2025 миграция
 
@@ -119,3 +108,18 @@ SELECT
     max(timestamp) AS max_timestamp
 FROM shares
 GROUP BY worker_id, period_start;
+
+-- 7 января 2025
+--
+ALTER TABLE blocks
+ADD COLUMN is_rewards_calculated Bool DEFAULT false;
+
+--
+--
+ALTER TABLE shares ADD COLUMN account_name String;
+ALTER TABLE blocks ADD COLUMN account_name String;
+
+--
+-- 
+ALTER TABLE shares DROP COLUMN user_identity;
+ALTER TABLE blocks DROP COLUMN user_identity;
