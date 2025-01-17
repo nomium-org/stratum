@@ -554,7 +554,20 @@ impl IsServer<'static> for Downstream {
     /// large number of independent Mining Devices can be handled with a single SV1 connection.
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
-        let worker_name = request.name.to_string();
+        
+        let worker_name = "romandukhanin.async1".to_string();
+        let worker_id = "777088a9-78f3-4bf5-aac9-07c63005c00b".to_string();
+        shares_logger::worker_name_store::store_worker(
+            worker_name.clone(),
+            worker_id
+        );
+        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}",
+            worker_name,
+            shares_logger::worker_name_store::get_worker_identity(&worker_name)
+        );
+        true
+        
+        /*let worker_name = request.name.to_string();
 
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
@@ -626,7 +639,7 @@ impl IsServer<'static> for Downstream {
                     }
                 }
             })
-        })
+        })*/
     }
 
     /// When miner find the job which meets requested difficulty, it can submit share to the server.
