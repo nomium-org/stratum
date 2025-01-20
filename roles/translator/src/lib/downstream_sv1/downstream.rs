@@ -555,78 +555,60 @@ impl IsServer<'static> for Downstream {
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
         let worker_name = request.name.to_string();
-
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-
-                let api_url = env::var("REDROCK_API_URL")
-                    .map(|url| {
-                        tracing::info!("Using REDROCK_API_URL from environment: {}", url);
-                        url
-                    })
-                    .expect("REDROCK_API_URL must be set in environment variables");
-
-                let api_key = env::var("REDROCK_API_KEY")
-                    .map(|key| {
-                        tracing::info!("Using REDROCK_API_KEY from environment: {}", "*".repeat(key.len()));
-                        key
-                    })
-                    .expect("REDROCK_API_KEY must be set in environment variables");
-
-                let timeout_seconds = env::var("REDROCK_TIMEOUT_SECONDS")
-                    .map(|timeout| {
-                        timeout.parse::<u64>()
-                            .expect("REDROCK_TIMEOUT_SECONDS must be a valid number")
-                    })
-                    .expect("REDROCK_TIMEOUT_SECONDS must be set in environment variables");
-
-                let client = reqwest::Client::builder()
-                    .timeout(std::time::Duration::from_secs(timeout_seconds))
-                    .build()
-                    .unwrap();
-
-                let result = client
-                    .post(&api_url)
-                    .header("X-Api-Key", api_key)
-                    .header("Content-Type", "application/json")
-                    .json(&serde_json::json!({
-                        "accountName": worker_name.split('.').next().unwrap_or("").to_string(),
-                        "workerName": worker_name.split('.').nth(1).unwrap_or("").to_string()
-                    }))
-                    .send()
-                    .await;
-
-                match result {
-                    Ok(response) => {
-                        if let Ok(json) = response.json::<serde_json::Value>().await {
-                            if let Some(is_success) = json.get("isSuccess").and_then(|v| v.as_bool()) {
-                                if is_success {
-                                    if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
-
-                                        shares_logger::worker_name_store::store_worker(
-                                            worker_name.clone(),
-                                            worker_id.to_string()
-                                        );
-                                        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}",
-                                            worker_name,
-                                            shares_logger::worker_name_store::get_worker_identity(&worker_name)
-                                        );
-                                        return true;
-                                    }
+    
+        let handle = std::thread::spawn(move || {
+            let api_url = env::var("REDROCK_API_URL")
+                .expect("REDROCK_API_URL must be set in environment variables");
+    
+            let api_key = env::var("REDROCK_API_KEY")
+                .expect("REDROCK_API_KEY must be set in environment variables");
+    
+            let timeout_seconds = env::var("REDROCK_TIMEOUT_SECONDS")
+                .map(|timeout| timeout.parse::<u64>().expect("Invalid timeout value"))
+                .expect("REDROCK_TIMEOUT_SECONDS must be set in environment variables");
+    
+            let client = reqwest::blocking::Client::builder()
+                .timeout(std::time::Duration::from_secs(timeout_seconds))
+                .build()
+                .unwrap();
+    
+            let result = client
+                .post(&api_url)
+                .header("X-Api-Key", api_key)
+                .header("Content-Type", "application/json")
+                .json(&serde_json::json!({
+                    "accountName": worker_name.split('.').next().unwrap_or("").to_string(),
+                    "workerName": worker_name.split('.').nth(1).unwrap_or("").to_string()
+                }))
+                .send();
+    
+            match result {
+                Ok(response) => {
+                    if let Ok(json) = response.json::<serde_json::Value>() {
+                        if let Some(is_success) = json.get("isSuccess").and_then(|v| v.as_bool()) {
+                            if is_success {
+                                if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
+                                    shares_logger::worker_name_store::store_worker(
+                                        worker_name.clone(),
+                                        worker_id.to_string(),
+                                    );
+                                    return true;
                                 }
                             }
                         }
-                        CONNECTION_AUTH_FAILURES.inc();
-                        false
                     }
-                    Err(e) => {
-                        CONNECTION_AUTH_FAILURES.inc();
-                        tracing::error!("Auth request failed: {:?}", e);
-                        false
-                    }
+                    CONNECTION_AUTH_FAILURES.inc();
+                    false
                 }
-            })
-        })
+                Err(e) => {
+                    CONNECTION_AUTH_FAILURES.inc();
+                    tracing::error!("Auth request failed: {:?}", e);
+                    false
+                }
+            }
+        });
+    
+        handle.join().unwrap_or(false)
     }
 
     /// When miner find the job which meets requested difficulty, it can submit share to the server.
