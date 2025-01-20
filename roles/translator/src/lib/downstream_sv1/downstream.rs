@@ -611,18 +611,6 @@ impl IsServer<'static> for Downstream {
         handle.join().unwrap_or(false)
     }
 
-        /* let worker_name = "romandukhanin.async1".to_string();
-        let worker_id = "777088a9-78f3-4bf5-aac9-07c63005c00b".to_string();
-        shares_logger::worker_name_store::store_worker(
-            worker_name.clone(),
-            worker_id
-        );
-        info!("!!!!!!!!! FROM DOWNSTREAM. Name: {}, Identity: {:?}",
-            worker_name,
-            shares_logger::worker_name_store::get_worker_identity(&worker_name)
-        );
-        true */
-
     /// When miner find the job which meets requested difficulty, it can submit share to the server.
     /// Only [Submit](client_to_server::Submit) requests for authorized user names can be submitted.
     fn handle_submit(&self, request: &client_to_server::Submit<'static>) -> bool {
