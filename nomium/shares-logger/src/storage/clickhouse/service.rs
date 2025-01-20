@@ -142,29 +142,20 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         let block_data = ClickhouseBlock::from(block);
         info!("Block data for insert: {:?}", block_data);
         
-        let mut batch_inserter = match self.client.insert("blocks") {
-            Ok(inserter) => {
-                info!("Created batch inserter successfully");
-                inserter
+        // Заменяем весь код с batch_inserter на JSON-вставку
+        let serialized = block_data.to_clickhouse_json();
+        let sql = format!("INSERT INTO blocks FORMAT JSONEachRow [{}]", serialized);
+        
+        match self.client.query(&sql).execute().await {
+            Ok(_) => {
+                info!("Successfully stored block");
+                Ok(())
             },
             Err(e) => {
-                error!("Failed to create batch inserter: {:?}", e);
-                return Err(ClickhouseError::BatchInsertError(e.to_string()));
+                error!("Failed to store block: {:?}", e);
+                Err(ClickhouseError::BatchInsertError(e.to_string()))
             }
-        };
-    
-        match batch_inserter.write(&block_data).await {
-            Ok(_) => info!("Successfully wrote block data"),
-            Err(e) => error!("Failed to write block data: {:?}", e),
         }
-    
-        match batch_inserter.end().await {
-            Ok(_) => info!("Successfully ended batch insert"),
-            Err(e) => error!("Failed to end batch insert: {:?}", e),
-        }
-    
-        info!("Block storage completed");
-        Ok(())
     }
 
     async fn store_batch(&mut self, blocks: Vec<BlockFound>) -> Result<(), ClickhouseError> {
@@ -178,22 +169,19 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         if self.batch.is_empty() {
             return Ok(());
         }
-
+    
         let batch_size = self.batch.len();
         info!("Flushing batch of {} block records", batch_size);
-
-        let mut batch_inserter = self.client.insert("blocks")
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-
+    
         for block in self.batch.drain(..) {
             let clickhouse_block = ClickhouseBlock::from(block);
-            batch_inserter.write(&clickhouse_block).await
+            let serialized = clickhouse_block.to_clickhouse_json();
+            
+            let sql = format!("INSERT INTO blocks FORMAT JSONEachRow [{}]", serialized);
+            self.client.query(&sql).execute().await
                 .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
         }
-
-        batch_inserter.end().await
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
-
+    
         self.last_flush = std::time::Instant::now();
         info!("Successfully flushed {} block records", batch_size);
         Ok(())

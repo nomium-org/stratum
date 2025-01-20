@@ -915,6 +915,7 @@ impl ChannelFactory {
                 hash_.as_hash().into_inner().to_vec(),
                 m.get_n_time() as u32,
                 user_identity_json,
+                shares_logger::get_utc_now(),
             );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection
