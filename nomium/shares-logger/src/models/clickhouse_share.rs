@@ -1,7 +1,8 @@
 use crate::models::ShareLog;
 use clickhouse::Row;
 use serde::Serialize;
-use chrono::{DateTime, Utc, SubsecRound, NaiveDateTime};
+use chrono::{DateTime, Utc, SubsecRound};
+use serde_json::json;
 
 #[derive(Row, Serialize)]
 pub struct ClickhouseShare {
@@ -38,7 +39,6 @@ impl From<ShareLog> for ClickhouseShare {
 
         let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();
 
-        //let timestamp = share.timestamp; 
         let timestamp = share.timestamp.trunc_subsecs(3);    
 
         Self {
@@ -57,5 +57,29 @@ impl From<ShareLog> for ClickhouseShare {
             is_pps_reward_calculated: false,
             timestamp: timestamp,
         }
+    }
+}
+
+impl ClickhouseShare {
+    pub fn to_clickhouse_json(&self) -> String {
+
+        let formatted_timestamp = self.timestamp.format("%Y-%m-%d %H:%M:%S.%3f").to_string();
+        
+        json!({
+            "account_name": self.account_name,
+            "worker_id": self.worker_id,
+            "sequence_number": self.sequence_number,
+            "job_id": self.job_id,
+            "nonce": self.nonce,
+            "ntime": self.ntime,
+            "version": self.version,
+            "hash": self.hash,
+            "share_status": self.share_status,
+            "extranonce": self.extranonce,
+            "difficulty": self.difficulty,
+            "channel_id": self.channel_id,
+            "is_pps_reward_calculated": self.is_pps_reward_calculated,
+            "timestamp": formatted_timestamp
+        }).to_string()
     }
 }
