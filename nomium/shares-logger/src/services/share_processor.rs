@@ -5,6 +5,7 @@ use crate::models::ShareStatus;
 use log::info;
 use serde_json::Value;
 use serde_json::json;
+use chrono::{DateTime, Utc};
 
 pub struct ShareProcessor;
 
@@ -20,6 +21,7 @@ impl ShareProcessor {
         downstream_target: Target,
         extranonce: Vec<u8>,
         user_identity_json: String,
+        timestamp: DateTime<Utc>,
     ) -> ShareLog {
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
@@ -57,6 +59,7 @@ impl ShareProcessor {
             difficulty,
             user_identity,
             worker_id,
+            timestamp,
         )
     }
 }

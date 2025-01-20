@@ -838,6 +838,7 @@ impl ChannelFactory {
                 .to_string(),
             Share::Standard(_) => panic!("Expected Extended share, got Standard"),
         };
+
         match self.kind {
             ExtendedChannelKind::Pool => {
                 /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
@@ -867,6 +868,7 @@ impl ChannelFactory {
                     downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
+                    shares_logger::get_utc_now(),
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);

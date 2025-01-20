@@ -20,6 +20,7 @@ use crate::models::BlockFound;
 use std::time::Instant;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use chrono::{DateTime, Utc};
 
 use nomium_prometheus::{
     SHALOG_SHARES_RECEIVED_TOTAL,
@@ -173,4 +174,8 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
             }
         }
     }
+}
+
+pub fn get_utc_now() -> DateTime<Utc> {
+    Utc::now()
 }

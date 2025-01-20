@@ -1,3 +1,5 @@
+-- clickhouse-client --host=localhost --port=9000 --user=default --password=5555 --database=mining
+
 -- 16 января 2025 миграция
 
 ALTER TABLE shares

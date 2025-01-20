@@ -121,6 +121,40 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
 
         for share in self.batch.drain(..) {
             let clickhouse_share = ClickhouseShare::from(share);
+
+            info!("Attempting to insert share with structure: \n\
+               channel_id: {}\n\
+               sequence_number: {}\n\
+               job_id: {}\n\
+               nonce: {}\n\
+               ntime: {}\n\
+               version: {}\n\
+               hash: {}\n\
+               share_status: {}\n\
+               extranonce: {}\n\
+               difficulty: {}\n\
+               worker_id: {}\n\
+               account_name: {}\n\
+               timestamp: {:?}",
+            clickhouse_share.channel_id,
+            clickhouse_share.sequence_number,
+            clickhouse_share.job_id,
+            clickhouse_share.nonce,
+            clickhouse_share.ntime,
+            clickhouse_share.version,
+            clickhouse_share.hash,
+            clickhouse_share.share_status,
+            clickhouse_share.extranonce,
+            clickhouse_share.difficulty,
+            clickhouse_share.worker_id,
+            clickhouse_share.account_name,
+            clickhouse_share.timestamp
+        );
+
+        let serialized = serde_json::to_string(&clickhouse_share)
+            .unwrap_or_default();
+        info!("Serialized share data: {}", serialized);
+
             batch_inserter.write(&clickhouse_share).await
                 .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
         }

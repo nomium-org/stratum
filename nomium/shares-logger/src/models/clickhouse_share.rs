@@ -1,10 +1,12 @@
 use crate::models::ShareLog;
 use clickhouse::Row;
 use serde::Serialize;
+use chrono::{DateTime, Utc, SubsecRound, NaiveDateTime};
 
 #[derive(Row, Serialize)]
 pub struct ClickhouseShare {
-    pub channel_id: u32,
+    pub account_name: String,
+    pub worker_id: String,
     pub sequence_number: u32,
     pub job_id: u32,
     pub nonce: u32,
@@ -14,8 +16,9 @@ pub struct ClickhouseShare {
     pub share_status: u8,
     pub extranonce: String,
     pub difficulty: f64,
-    pub worker_id: String,
-    pub account_name: String,
+    pub channel_id: u32,
+    pub is_pps_reward_calculated: bool,
+    pub timestamp: DateTime<Utc>,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -33,7 +36,10 @@ impl From<ShareLog> for ClickhouseShare {
                 acc
             });
 
-        let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();    
+        let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();
+
+        //let timestamp = share.timestamp; 
+        let timestamp = share.timestamp.trunc_subsecs(3);    
 
         Self {
             channel_id: share.channel_id,
@@ -48,6 +54,8 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             worker_id: share.worker_id,
             account_name: account_name,
+            is_pps_reward_calculated: false,
+            timestamp: timestamp,
         }
     }
 }
