@@ -4,7 +4,7 @@
 # upstream_port = 3336
 
 # Local SRI Pool Upstream Connection
-upstream_address = "127.0.0.1"
+upstream_address = "pool"
 upstream_port = 34254
 upstream_authority_pubkey = "9auqWEzQDVyd2oe1JVGFLMLHZtCo2FFqZwtKA5gd9xbuEu7PH72"
 
