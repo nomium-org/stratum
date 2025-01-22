@@ -910,11 +910,14 @@ impl ChannelFactory {
                 Share::Standard(_) => "unknown".to_string(),
             };
 
+            let found_at = shares_logger::get_utc_now();
+
             let block = shares_logger::models::BlockFound::prepare_block(
                 m.get_channel_id(),
                 hash_.as_hash().into_inner().to_vec(),
                 m.get_n_time() as u32,
                 user_identity_json,
+                found_at,
             );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection

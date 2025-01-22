@@ -9,16 +9,23 @@ pub struct ClickhouseBlock {
     pub ntime: u32,
     pub worker_id: String,
     pub account_name: String,
+    found_at: i64,
 }
 
 impl From<BlockFound> for ClickhouseBlock {
     fn from(block: BlockFound) -> Self {
+
+        let datetime_utc = block.found_at; 
+        let timestamp_ms = datetime_utc.timestamp_millis();
+        let found_at = timestamp_ms;
+
         Self {
             channel_id: block.channel_id,
             block_hash: hex::encode(&block.block_hash),
             ntime: block.ntime,
             worker_id: block.worker_id,
             account_name: block.account_name,
+            found_at,
         }
     }
 }
