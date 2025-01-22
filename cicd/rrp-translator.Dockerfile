@@ -13,7 +13,6 @@ RUN cargo build --target x86_64-unknown-linux-musl --release
 FROM scratch
 
 WORKDIR /app
-ENV RUST_LOG=debug
 COPY --from=build /stratum/roles/target/x86_64-unknown-linux-musl/release/translator_sv2 .
 COPY --from=build /stratum/roles/translator/config-examples/tproxy-config-local-pool-PoolTest.toml .
 
