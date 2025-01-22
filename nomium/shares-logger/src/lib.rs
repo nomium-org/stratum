@@ -5,6 +5,7 @@ pub mod services;
 pub mod storage;
 pub mod traits;
 pub mod worker_name_store;
+use chrono::{DateTime, Utc};
 
 use crate::config::SETTINGS;
 use log::info;
@@ -173,4 +174,10 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
             }
         }
     }
+}
+
+pub fn get_utc_now() -> DateTime<Utc> {
+    let now = Utc::now();
+    info!("Current UTC timestamp from get_utc_now(): {}", now);
+    now
 }

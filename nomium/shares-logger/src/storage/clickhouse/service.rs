@@ -92,6 +92,7 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
     }
 
     async fn store_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
+        info!("Share timestamp before inserting into batch: {}", share.timestamp);
         self.batch.push(share);
         let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
                           self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
@@ -121,6 +122,8 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
 
         for share in self.batch.drain(..) {
             let clickhouse_share = ClickhouseShare::from(share);
+            info!("Share timestamp before Clickhouse insert: {}", clickhouse_share.timestamp);
+            //info!("ClickhouseShare structure before insert: {:?}", clickhouse_share);
             batch_inserter.write(&clickhouse_share).await
                 .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
         }
