@@ -35,10 +35,6 @@ impl From<ShareLog> for ClickhouseShare {
             });
 
         let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();
-  
-        let datetime_utc = share.timestamp; 
-        let timestamp_ms = datetime_utc.timestamp_millis();
-        let timestamp = timestamp_ms;
 
         Self {
             channel_id: share.channel_id,
@@ -53,7 +49,7 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             worker_id: share.worker_id,
             account_name: account_name,
-            timestamp,
+            timestamp: share.timestamp.timestamp_millis(),
         }
     }
 }

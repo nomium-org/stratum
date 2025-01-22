@@ -22,7 +22,6 @@ impl BlockFound {
         user_identity_json: String,
         found_at: DateTime<Utc>,
     ) -> Self {
-        info!("Preparing block with user_identity_json: {}", user_identity_json);
 
         block_hash.reverse();
         
@@ -43,8 +42,6 @@ impl BlockFound {
             .to_string();
 
         let account_name = user_identity.split('.').next().unwrap_or_default().to_string();
-
-        info!("Block prepared with worker_id: {}", worker_id);
 
         BlockFound {
             channel_id,
