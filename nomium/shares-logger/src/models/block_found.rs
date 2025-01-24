@@ -1,8 +1,6 @@
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use serde_json::json;
-use log::info;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlockFound {
@@ -11,7 +9,7 @@ pub struct BlockFound {
     pub ntime: u32,
     pub worker_id: String,
     pub account_name: String,
-    pub found_at: DateTime<Utc>,
+    pub found_at: i64,
 }
 
 impl BlockFound {
@@ -20,7 +18,7 @@ impl BlockFound {
         mut block_hash: Vec<u8>,
         ntime: u32,
         user_identity_json: String,
-        found_at: DateTime<Utc>,
+        found_at: i64,
     ) -> Self {
 
         block_hash.reverse();

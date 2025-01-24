@@ -49,7 +49,7 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             worker_id: share.worker_id,
             account_name: account_name,
-            timestamp: share.timestamp.timestamp_millis(),
+            timestamp: share.timestamp,
         }
     }
 }

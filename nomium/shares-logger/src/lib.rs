@@ -5,7 +5,6 @@ pub mod services;
 pub mod storage;
 pub mod traits;
 pub mod worker_name_store;
-use chrono::{DateTime, Utc};
 
 use crate::config::SETTINGS;
 use log::info;
@@ -21,6 +20,7 @@ use crate::models::BlockFound;
 use std::time::Instant;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use nomium_prometheus::{
     SHALOG_SHARES_RECEIVED_TOTAL,
@@ -176,8 +176,9 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
     }
 }
 
-pub fn get_utc_now() -> DateTime<Utc> {
-    let now = Utc::now();
-    info!("Current UTC timestamp from get_utc_now(): {}", now);
-    now
+
+pub fn get_utc_now() -> i64 {
+    let now = SystemTime::now();
+    let duration_since_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+    duration_since_epoch.as_millis() as i64
 }

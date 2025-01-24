@@ -5,7 +5,6 @@ use crate::models::ShareStatus;
 use log::info;
 use serde_json::Value;
 use serde_json::json;
-use chrono::{DateTime, Utc};
 
 pub struct ShareProcessor;
 
@@ -21,7 +20,7 @@ impl ShareProcessor {
         downstream_target: Target,
         extranonce: Vec<u8>,
         user_identity_json: String,
-        timestamp: DateTime<Utc>,
+        timestamp: i64,
     ) -> ShareLog {
         
         info!("Share timestamp at the beginning of prepare_share_log: {}", timestamp);

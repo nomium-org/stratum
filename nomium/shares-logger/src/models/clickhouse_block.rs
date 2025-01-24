@@ -22,7 +22,7 @@ impl From<BlockFound> for ClickhouseBlock {
             ntime: block.ntime,
             worker_id: block.worker_id,
             account_name: block.account_name,
-            found_at: block.found_at.timestamp_millis(),
+            found_at: block.found_at,
         }
     }
 }
