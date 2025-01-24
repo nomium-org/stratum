@@ -636,6 +636,31 @@ impl IsServer<'static> for Downstream {
 
             true
         } else {
+            // NOMIUM share_log injection ----
+            let worker_identity = shares_logger::worker_name_store::get_worker_identity(&request.user_name)
+                .map(|id| serde_json::json!({
+                    "worker_name": id.worker_name,
+                    "worker_id": id.worker_id
+                }).to_string())
+                .expect("Worker should be authorized");
+            
+            let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                1,
+                0,
+                request.job_id.parse().unwrap_or(0),
+                request.nonce.0,
+                request.time.0,
+                match &request.version_bits {
+                    Some(v) => v.0,
+                    None => 0,
+                },
+                [0u8; 32],
+                vec![],
+                worker_identity, 
+                shares_logger::models::ShareStatus::Invalid 
+            );
+            shares_logger::log_share(share_log);
+            // NOMIUM share_log injection ----
             false
         }
     }
