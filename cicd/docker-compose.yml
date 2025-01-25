@@ -13,6 +13,7 @@ services:
           - POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_TYPE=P2WPKH
           - POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_VALUE=03ddffb8b541bf4894ef6f5d133daf4d61d8ec4a96e048ef7d36007e5194d93b04
           - TPROXY_LOG_LEVEL_FILE=ERROR
+          - TPROXY_LOG_LEVEL_CONSOLE=ERROR
         container_name: pool
         network_mode: host
  
@@ -32,5 +33,6 @@ services:
           - SHARES_LOGGER__CLICKHOUSE__USERNAME=${CLICKHOUSE_USER}
           - SHARES_LOGGER__CLICKHOUSE__PASSWORD=${CLICKHOUSE_PASSWORD}
           - TPROXY_LOG_LEVEL_FILE=ERROR
+          - TPROXY_LOG_LEVEL_CONSOLE=ERROR
         container_name: translator
         network_mode: host
