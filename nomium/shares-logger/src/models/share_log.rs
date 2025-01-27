@@ -14,7 +14,7 @@ pub struct ShareLog {
     pub difficulty: f64,
     pub user_identity: String,
     pub worker_id: String,
-    pub timestamp: i64,
+    pub received_at: i64,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -39,7 +39,7 @@ impl ShareLog {
         difficulty: f64,
         user_identity: String,
         worker_id: String,
-        timestamp: i64,
+        received_at: i64,
     ) -> Self {
         Self {
             channel_id,
@@ -54,7 +54,7 @@ impl ShareLog {
             difficulty,
             user_identity,
             worker_id,
-            timestamp,
+            received_at,
         }
     }
 }

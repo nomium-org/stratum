@@ -20,10 +20,10 @@ impl ShareProcessor {
         downstream_target: Target,
         extranonce: Vec<u8>,
         user_identity_json: String,
-        timestamp: i64,
+        received_at: i64,
     ) -> ShareLog {
         
-        info!("Share timestamp at the beginning of prepare_share_log: {}", timestamp);
+        info!("Share received_at at the beginning of prepare_share_log: {}", received_at);
         
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
@@ -61,7 +61,7 @@ impl ShareProcessor {
             difficulty,
             user_identity,
             worker_id,
-            timestamp,
+            received_at,
         )
     }
 }

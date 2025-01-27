@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS shares (
     difficulty Float64,
     channel_id UInt32,
     is_pps_reward_calculated Bool DEFAULT false,
-    timestamp DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC')
+    received_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC')
 ) ENGINE = MergeTree()
-PARTITION BY toYYYYMMDD(timestamp)
-ORDER BY (worker_id, timestamp, ntime)
+PARTITION BY toYYYYMMDD(received_at)
+ORDER BY (worker_id, received_at, ntime)
 SETTINGS index_granularity = 8192;

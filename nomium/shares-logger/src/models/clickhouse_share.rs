@@ -16,7 +16,7 @@ pub struct ClickhouseShare {
     pub difficulty: f64,
     pub worker_id: String,
     pub account_name: String,
-    pub timestamp: i64,
+    pub received_at: i64,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -49,7 +49,7 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             worker_id: share.worker_id,
             account_name: account_name,
-            timestamp: share.timestamp,
+            received_at: share.received_at,
         }
     }
 }
