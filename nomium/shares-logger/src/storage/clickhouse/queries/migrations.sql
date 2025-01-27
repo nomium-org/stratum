@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS shares (
     sequence_number UInt32,
     job_id UInt32,
     nonce UInt32,
-    ntime UInt32,
+    time_from_worker UInt32,
     version UInt32,
     hash String,
     share_status UInt8,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS shares (
     received_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC')
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(received_at)
-ORDER BY (worker_id, received_at, ntime)
+ORDER BY (worker_id, received_at, time_from_worker)
 SETTINGS index_granularity = 8192;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_hash_rate_stats
@@ -45,12 +45,12 @@ CREATE TABLE IF NOT EXISTS blocks (
     worker_id String,
     channel_id UInt32,
     block_hash String,
-    ntime UInt32,
+    time_from_worker UInt32,
     received_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC'),
     is_rewards_calculated Bool DEFAULT false
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(received_at)
-ORDER BY (worker_id, received_at, ntime)
+ORDER BY (worker_id, received_at, time_from_worker)
 SETTINGS index_granularity = 8192;
 
 -- 16 января 2025 миграция

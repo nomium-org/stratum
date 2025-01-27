@@ -6,7 +6,7 @@ use serde_json::json;
 pub struct BlockFound {
     pub channel_id: u32,
     pub block_hash: Vec<u8>,
-    pub ntime: u32,
+    pub time_from_worker: u32,
     pub worker_id: String,
     pub account_name: String,
     pub received_at: i64,
@@ -16,7 +16,7 @@ impl BlockFound {
     pub fn prepare_block(
         channel_id: u32,
         mut block_hash: Vec<u8>,
-        ntime: u32,
+        time_from_worker: u32,
         user_identity_json: String,
         received_at: i64,
     ) -> Self {
@@ -44,7 +44,7 @@ impl BlockFound {
         BlockFound {
             channel_id,
             block_hash,
-            ntime,
+            time_from_worker,
             worker_id,
             account_name,
             received_at,

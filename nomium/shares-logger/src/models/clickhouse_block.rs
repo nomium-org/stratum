@@ -6,7 +6,7 @@ use serde::Serialize;
 pub struct ClickhouseBlock {
     pub channel_id: u32,
     pub block_hash: String,
-    pub ntime: u32,
+    pub time_from_worker: u32,
     pub worker_id: String,
     pub account_name: String,
     received_at: i64,
@@ -19,7 +19,7 @@ impl From<BlockFound> for ClickhouseBlock {
         Self {
             channel_id: block.channel_id,
             block_hash: hex::encode(&block.block_hash),
-            ntime: block.ntime,
+            time_from_worker: block.time_from_worker,
             worker_id: block.worker_id,
             account_name: block.account_name,
             received_at: block.received_at,

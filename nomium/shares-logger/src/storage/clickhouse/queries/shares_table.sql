@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS shares (
     sequence_number UInt32,
     job_id UInt32,
     nonce UInt32,
-    ntime UInt32,
+    time_from_worker UInt32,
     version UInt32,
     hash String,
     share_status UInt8,
@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS shares (
     received_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC')
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(received_at)
-ORDER BY (worker_id, received_at, ntime)
+ORDER BY (worker_id, received_at, time_from_worker)
 SETTINGS index_granularity = 8192;
