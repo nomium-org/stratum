@@ -9,7 +9,7 @@ pub struct ClickhouseBlock {
     pub ntime: u32,
     pub worker_id: String,
     pub account_name: String,
-    found_at: i64,
+    received_at: i64,
 }
 
 impl From<BlockFound> for ClickhouseBlock {
@@ -22,7 +22,7 @@ impl From<BlockFound> for ClickhouseBlock {
             ntime: block.ntime,
             worker_id: block.worker_id,
             account_name: block.account_name,
-            found_at: block.found_at,
+            received_at: block.received_at,
         }
     }
 }
