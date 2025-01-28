@@ -14,13 +14,17 @@ impl ShareProcessor {
         sequence_number: u32,
         job_id: u32,
         nonce: u32,
-        ntime: u32,
+        time_from_worker: u32,
         version: u32,
         hash: [u8; 32],
         downstream_target: Target,
         extranonce: Vec<u8>,
         user_identity_json: String,
+        received_at: i64,
     ) -> ShareLog {
+        
+        info!("Share received_at at the beginning of prepare_share_log: {}", received_at);
+        
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
                 "worker_name": user_identity_json.clone(),
@@ -49,7 +53,7 @@ impl ShareProcessor {
             sequence_number,
             job_id,
             nonce,
-            ntime, 
+            time_from_worker, 
             version,
             hash_bytes.to_vec(),
             status,
@@ -57,6 +61,7 @@ impl ShareProcessor {
             difficulty,
             user_identity,
             worker_id,
+            received_at,
         )
     }
 }

@@ -848,6 +848,7 @@ impl ChannelFactory {
                 .to_string(),
             Share::Standard(_) => panic!("Expected Extended share, got Standard"),
         };
+
         match self.kind {
             ExtendedChannelKind::Pool => {
                 /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
@@ -877,6 +878,7 @@ impl ChannelFactory {
                     downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
+                    shares_logger::get_utc_now(),
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
@@ -923,6 +925,7 @@ impl ChannelFactory {
                 hash_.as_hash().into_inner().to_vec(),
                 m.get_n_time() as u32,
                 user_identity_json,
+                shares_logger::get_utc_now(),
             );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection

@@ -6,10 +6,10 @@ POPULATE
 AS
 SELECT
     worker_id,
-    toStartOfMinute(timestamp, 'UTC') AS period_start,
+    toStartOfMinute(received_at, 'UTC') AS period_start,
     count() AS share_count,
     min(difficulty) * count() * pow(2, 32) AS total_hashes,
     sum(CASE WHEN share_status = 0 THEN 1 ELSE 0 END) AS refused_shards,
-    max(timestamp) AS max_timestamp
+    max(received_at) AS max_received_at
 FROM shares
 GROUP BY worker_id, period_start;
