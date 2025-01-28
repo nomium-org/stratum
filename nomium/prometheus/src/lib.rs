@@ -7,6 +7,42 @@ use std::env;
 use tracing::error;
 
 lazy_static! {
+
+    // SHARES_REFUSED_TEST_ as SHRT_
+    pub static ref REFUSED_SHARES_SUMMARY: IntCounter =
+        register_int_counter!("refused_shares_summary", 
+            "shrt_fn_handle_submit_refused + bridge_on_new_share_rejected_total").unwrap();
+
+    pub static ref SHRT_SAVE_SHARE_TO_VARDIFF: IntCounter =
+        register_int_counter!("shrt_save_share_to_vardiff_total", 
+            "Total number of shares received if message is Submit Shares update difficulty management").unwrap();
+
+    pub static ref SHRT_FN_HANDLE_SUBMIT_REFUSED: IntCounter =
+        register_int_counter!("shrt_fn_handle_submit_refused", 
+            "Total number of shares refused in fn handle_submit").unwrap();
+
+    pub static ref SHRT_FN_TRANSLATE_SUBMIT_REFUSED: IntCounter =
+        register_int_counter!("shrt_fn_translate_submit_refused", 
+            "Total number of shares refused in fn translate_submit").unwrap(); 
+
+    pub static ref SHRT_DIFFICULTY_TOO_LOW_IN_CHANNEL_FACTORY: IntCounter =
+        register_int_counter!("shrt_difficulty_too_low_in_channel_factory", 
+            "Total number of shares refused in channel_factory cause difficulty_too_low").unwrap();            
+    
+    pub static ref SHRT_JOB_ID_IN_CHANNEL_FACTORY: IntCounter =
+        register_int_counter!("shrt_job_id_in_channel_factory", 
+            "Total number of shares refused in channel_factory cause job_id").unwrap(); 
+
+    pub static ref SHRT_INVALID_COINBASE_IN_CHANNEL_FACTORY: IntCounter =
+        register_int_counter!("shrt_invalid_coinbase_in_channel_factory", 
+            "Total number of shares refused in channel_factory cause invalid_coinbase").unwrap();
+    
+    pub static ref SHRT_NO_TEMPLATE_FOR_ID_IN_CHANNEL_FACTORY: IntCounter =
+        register_int_counter!("shrt_no_template_for_id_in_channel_factory", 
+            "Total number of shares refused in channel_factory cause NoTemplateForId").unwrap();
+    
+    //
+
     pub static ref SHARES_RECEIVED: IntCounter =
         register_int_counter!("mining_shares_received_total", 
             "Total number of shares received from miners before any validation").unwrap();
@@ -23,8 +59,8 @@ lazy_static! {
         register_int_counter!("mining_shares_downstream_target_meet_total", 
             "Shares that meet downstream (miner) target").unwrap();
 
-    pub static ref TPROXY_SHARES_REJECTED_TOTAL: IntCounter =
-        register_int_counter!("tproxy_shares_rejected_total", 
+    pub static ref BRIDGE_ON_NEW_SHARE_REJECTED_TOTAL: IntCounter =
+        register_int_counter!("bridge_on_new_share_rejected_total", 
             "Total number of rejected shares").unwrap();
 
     pub static ref ACTIVE_CONNECTIONS: IntGauge =

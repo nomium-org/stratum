@@ -19,7 +19,13 @@ use std::{collections::HashMap, convert::TryInto, sync::Arc};
 use template_distribution_sv2::{NewTemplate, SetNewPrevHash as SetNewPrevHashFromTp};
 
 use tracing::{debug, error, info, trace, warn};
-use std::backtrace::Backtrace;
+
+use nomium_prometheus::{
+    SHRT_DIFFICULTY_TOO_LOW_IN_CHANNEL_FACTORY,
+    SHRT_JOB_ID_IN_CHANNEL_FACTORY,
+    SHRT_INVALID_COINBASE_IN_CHANNEL_FACTORY,
+    SHRT_NO_TEMPLATE_FOR_ID_IN_CHANNEL_FACTORY
+};
 
 use stratum_common::{
     bitcoin,
@@ -804,15 +810,19 @@ impl ChannelFactory {
             coinbase_tx_suffix
         );
         // Safe unwrap a sha256 can always be converted into [u8;32]
-        let merkle_root: [u8; 32] = crate::utils::merkle_root_from_path(
+        let merkle_root: [u8; 32] = match crate::utils::merkle_root_from_path(
             coinbase_tx_prefix,
             coinbase_tx_suffix,
             &extranonce[..],
             &merkle_path[..],
-        )
-        .ok_or(Error::InvalidCoinbase)?
-        .try_into()
-        .unwrap();
+        ) {
+            Some(root) => root.try_into().unwrap(),
+            None => {
+                SHRT_INVALID_COINBASE_IN_CHANNEL_FACTORY.inc();
+                return Err(Error::InvalidCoinbase);
+            }
+        };
+        
         let version = match &m {
             Share::Extended(share) => share.version as i32,
             Share::Standard(share) => share.0.version as i32,
@@ -838,6 +848,8 @@ impl ChannelFactory {
                 .to_string(),
             Share::Standard(_) => panic!("Expected Extended share, got Standard"),
         };
+
+        let received_at = shares_logger::get_utc_now();
 
         match self.kind {
             ExtendedChannelKind::Pool => {
@@ -868,7 +880,7 @@ impl ChannelFactory {
                     downstream_target.clone(),
                     extranonce.to_vec(),
                     user_identity,
-                    shares_logger::get_utc_now(),
+                    received_at,
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
@@ -915,7 +927,7 @@ impl ChannelFactory {
                 hash_.as_hash().into_inner().to_vec(),
                 m.get_n_time() as u32,
                 user_identity_json,
-                shares_logger::get_utc_now(),
+                received_at,
             );
             shares_logger::log_block(block);
             //  ---- NOMIUM share_log injection
@@ -970,6 +982,7 @@ impl ChannelFactory {
                     .try_into()
                     .unwrap(),
             };
+            SHRT_DIFFICULTY_TOO_LOW_IN_CHANNEL_FACTORY.inc();
             Ok(OnNewShare::SendErrorDownstream(error))
         }
     }
@@ -1169,10 +1182,13 @@ impl PoolChannelFactory {
                     .ok_or(Error::ShareDoNotMatchAnyJob)?
                     .0;
                 let merkle_path = referenced_job.merkle_path.to_vec();
-                let template_id = self
-                    .job_creator
-                    .get_template_id_from_job(referenced_job.job_id)
-                    .ok_or(Error::NoTemplateForId)?;
+                let template_id = match self.job_creator.get_template_id_from_job(referenced_job.job_id) {
+                    Some(id) => id,
+                    None => {
+                        SHRT_NO_TEMPLATE_FOR_ID_IN_CHANNEL_FACTORY.inc();
+                        return Err(Error::NoTemplateForId);
+                    }
+                };
                 let target = self.job_creator.last_target();
                 let prev_blockhash = self
                     .inner
@@ -1589,6 +1605,7 @@ impl ProxyExtendedChannelFactory {
                     .try_into()
                     .unwrap(),
             };
+            SHRT_JOB_ID_IN_CHANNEL_FACTORY.inc();
             return Ok(OnNewShare::SendErrorDownstream(error));
         }
 

@@ -1,4 +1,15 @@
-use crate::metrics::{SHARES_VALID_JOBID, ACTIVE_CONNECTIONS, SHARES_RECEIVED, CONNECTION_ATTEMPTS, CONNECTION_FAILURES, CONNECTION_AUTH_FAILURES, CONNECTION_TIMEOUT_FAILURES};
+use crate::metrics::{
+    SHARES_VALID_JOBID, 
+    ACTIVE_CONNECTIONS, 
+    SHARES_RECEIVED, 
+    CONNECTION_ATTEMPTS, 
+    CONNECTION_FAILURES, 
+    CONNECTION_AUTH_FAILURES, 
+    CONNECTION_TIMEOUT_FAILURES, 
+    SHRT_SAVE_SHARE_TO_VARDIFF,
+    SHRT_FN_HANDLE_SUBMIT_REFUSED,
+    REFUSED_SHARES_SUMMARY
+};
 
 use crate::{
     downstream_sv1,
@@ -188,6 +199,7 @@ impl Downstream {
                                 // if message is Submit Shares update difficulty management
                                 if let v1::Message::StandardRequest(standard_req) = incoming.clone() {
                                     if let Ok(Submit{..}) = standard_req.try_into() {
+                                        SHRT_SAVE_SHARE_TO_VARDIFF.inc();
                                         handle_result!(tx_status_reader, Self::save_share(self_.clone()));
                                     }
                                 }
@@ -636,6 +648,8 @@ impl IsServer<'static> for Downstream {
 
             true
         } else {
+            SHRT_FN_HANDLE_SUBMIT_REFUSED.inc();
+            REFUSED_SHARES_SUMMARY.inc();
             false
         }
     }
