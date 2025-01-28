@@ -1,25 +1,25 @@
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use serde_json::json;
-use log::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlockFound {
     pub channel_id: u32,
     pub block_hash: Vec<u8>,
-    pub ntime: u32,
+    pub time_from_worker: u32,
     pub worker_id: String,
     pub account_name: String,
+    pub received_at: i64,
 }
 
 impl BlockFound {
     pub fn prepare_block(
         channel_id: u32,
         mut block_hash: Vec<u8>,
-        ntime: u32,
+        time_from_worker: u32,
         user_identity_json: String,
+        received_at: i64,
     ) -> Self {
-        info!("Preparing block with user_identity_json: {}", user_identity_json);
 
         block_hash.reverse();
         
@@ -41,14 +41,13 @@ impl BlockFound {
 
         let account_name = user_identity.split('.').next().unwrap_or_default().to_string();
 
-        info!("Block prepared with worker_id: {}", worker_id);
-
         BlockFound {
             channel_id,
             block_hash,
-            ntime,
+            time_from_worker,
             worker_id,
             account_name,
+            received_at,
         }
     }
 }

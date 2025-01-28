@@ -2,13 +2,13 @@ use crate::models::ShareLog;
 use clickhouse::Row;
 use serde::Serialize;
 
-#[derive(Row, Serialize)]
+#[derive(Row, Serialize, Debug)]
 pub struct ClickhouseShare {
     pub channel_id: u32,
     pub sequence_number: u32,
     pub job_id: u32,
     pub nonce: u32,
-    pub ntime: u32,
+    pub time_from_worker: u32,
     pub version: u32,
     pub hash: String,
     pub share_status: u8,
@@ -16,6 +16,7 @@ pub struct ClickhouseShare {
     pub difficulty: f64,
     pub worker_id: String,
     pub account_name: String,
+    pub received_at: i64,
 }
 
 impl From<ShareLog> for ClickhouseShare {
@@ -33,14 +34,14 @@ impl From<ShareLog> for ClickhouseShare {
                 acc
             });
 
-        let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();    
+        let account_name = share.user_identity.split('.').next().unwrap_or_default().to_string();
 
         Self {
             channel_id: share.channel_id,
             sequence_number: share.sequence_number,
             job_id: share.job_id,
             nonce: share.nonce,
-            ntime: share.ntime,
+            time_from_worker: share.time_from_worker,
             version: share.version,
             hash: hash_hex,
             share_status: share.share_status as u8,
@@ -48,6 +49,7 @@ impl From<ShareLog> for ClickhouseShare {
             difficulty: share.difficulty,
             worker_id: share.worker_id,
             account_name: account_name,
+            received_at: share.received_at,
         }
     }
 }
