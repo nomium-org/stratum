@@ -2,7 +2,8 @@ use crate::metrics::{
     SHARES_UPSTREAM_TARGET_MEET, 
     SHARES_DOWNSTREAM_TARGET_MEET, 
     BRIDGE_ON_NEW_SHARE_REJECTED_TOTAL,
-    SHRT_FN_TRANSLATE_SUBMIT_REFUSED
+    SHRT_FN_TRANSLATE_SUBMIT_REFUSED,
+    REFUSED_SHARES_SUMMARY
 };
 use async_channel::{Receiver, Sender};
 use roles_logic_sv2::{
@@ -256,6 +257,7 @@ impl Bridge {
                     std::str::from_utf8(&e.error_code.to_vec()[..])
                 );
                 BRIDGE_ON_NEW_SHARE_REJECTED_TOTAL.inc();
+                REFUSED_SHARES_SUMMARY.inc();
             }
             Ok(Ok(OnNewShare::SendSubmitShareUpstream((share, _)))) => {
                 info!("SHARE MEETS UPSTREAM TARGET");

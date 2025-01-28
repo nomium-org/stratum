@@ -7,7 +7,8 @@ use crate::metrics::{
     CONNECTION_AUTH_FAILURES, 
     CONNECTION_TIMEOUT_FAILURES, 
     SHRT_SAVE_SHARE_TO_VARDIFF,
-    SHRT_FN_HANDLE_SUBMIT_REFUSED
+    SHRT_FN_HANDLE_SUBMIT_REFUSED,
+    REFUSED_SHARES_SUMMARY
 };
 
 use crate::{
@@ -648,6 +649,7 @@ impl IsServer<'static> for Downstream {
             true
         } else {
             SHRT_FN_HANDLE_SUBMIT_REFUSED.inc();
+            REFUSED_SHARES_SUMMARY.inc();
             false
         }
     }

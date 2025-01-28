@@ -9,6 +9,10 @@ use tracing::error;
 lazy_static! {
 
     // SHARES_REFUSED_TEST_ as SHRT_
+    pub static ref REFUSED_SHARES_SUMMARY: IntCounter =
+        register_int_counter!("refused_shares_summary", 
+            "shrt_fn_handle_submit_refused + bridge_on_new_share_rejected_total").unwrap();
+
     pub static ref SHRT_SAVE_SHARE_TO_VARDIFF: IntCounter =
         register_int_counter!("shrt_save_share_to_vardiff_total", 
             "Total number of shares received if message is Submit Shares update difficulty management").unwrap();
