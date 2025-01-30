@@ -10,9 +10,12 @@ WORKDIR /stratum/roles/translator
 RUN rustup target add x86_64-unknown-linux-musl
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
-FROM scratch
+FROM alpine:latest
+
+RUN apk add --no-cache bash iproute2
 
 WORKDIR /app
+COPY --from=build /cicd/connection_monitor.sh /app/connection_monitor.sh
 COPY --from=build /stratum/roles/target/x86_64-unknown-linux-musl/release/translator_sv2 .
 COPY --from=build /stratum/roles/translator/config-examples/tproxy-config-local-pool-PoolTest.toml .
 
