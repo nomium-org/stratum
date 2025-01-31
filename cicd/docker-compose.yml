@@ -1,7 +1,18 @@
+x-def-logging: &default-logging
+  logging:
+    driver: "loki"
+    options:
+      loki-url: "http://84.201.144.127:3100/loki/api/v1/push"
+      loki-batch-size: "100"
+      loki-retries: 2
+      loki-max-backoff: 1000ms
+      loki-timeout: 1s
+
 services:
     pool:
         image: ${NEXUS_URL}/rrp-pool:latest
         restart: always
+        <<: *default-logging
         volumes:
           - /var/log/pool:/app/logs
         environment:
@@ -20,6 +31,7 @@ services:
     translator:
         image: ${NEXUS_URL}/rrp-translator:latest
         restart: always
+        <<: *default-logging
         volumes:
           - /var/log/translator:/app/logs
         environment:
