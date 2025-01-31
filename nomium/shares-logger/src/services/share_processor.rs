@@ -21,6 +21,7 @@ impl ShareProcessor {
         extranonce: Vec<u8>,
         user_identity_json: String,
         received_at: i64,
+        share_status: ShareStatus,
     ) -> ShareLog {
         
         info!("Share received_at at the beginning of prepare_share_log: {}", received_at);
@@ -46,8 +47,6 @@ impl ShareProcessor {
         hash_bytes.reverse();
         let difficulty = DifficultyService::calculate_difficulty_from_hash(&hash_bytes);
 
-        let status = ShareStatus::NetworkValid;
-
         ShareLog::new(
             channel_id,
             sequence_number,
@@ -56,7 +55,7 @@ impl ShareProcessor {
             time_from_worker, 
             version,
             hash_bytes.to_vec(),
-            status,
+            share_status,
             extranonce,
             difficulty,
             user_identity,

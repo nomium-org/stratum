@@ -36,6 +36,14 @@ use stratum_common::{
     },
 };
 
+use shares_logger::models::ShareStatus;
+enum ShareValidation {
+    Bitcoin,
+    Upstream,
+    Downstream,
+    Invalid
+}
+
 /// A stripped type of `SetCustomMiningJob` without the (`channel_id, `request_id` and `token`)
 /// fields
 #[derive(Debug)]
@@ -841,54 +849,6 @@ impl ChannelFactory {
         let hash_ = header.block_hash();
         let hash = hash_.as_hash().into_inner();
 
-        // NOMIUM share_log injection ----
-        let user_identity = match &m {
-            Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
-                .unwrap_or("invalid_utf8")
-                .to_string(),
-            Share::Standard(_) => panic!("Expected Extended share, got Standard"),
-        };
-
-        let received_at = shares_logger::get_utc_now();
-
-        match self.kind {
-            ExtendedChannelKind::Pool => {
-                /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
-                    m.get_channel_id(),
-                    m.get_sequence_number(),
-                    m.get_job_id(),
-                    m.get_nonce(),
-                    m.get_n_time(),
-                    m.get_version(),
-                    hash,
-                    downstream_target.clone(),
-                    extranonce.to_vec(),
-                    user_identity,
-                ); */
-                info!("Calling share logging for POOL");
-                //shares_logger::log_share(share_log);
-            },
-            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
-                let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
-                    m.get_channel_id(),
-                    m.get_sequence_number(),
-                    m.get_job_id(),
-                    m.get_nonce(),
-                    m.get_n_time(),
-                    m.get_version(),
-                    hash,
-                    downstream_target.clone(),
-                    extranonce.to_vec(),
-                    user_identity,
-                    received_at,
-                );
-                info!("Calling share logging for PROXY");
-                shares_logger::log_share(share_log);
-                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc();
-            }
-        }
-        // ---- NOMIUM share_log injection ----
-
         if tracing::level_enabled!(tracing::Level::DEBUG)
             || tracing::level_enabled!(tracing::Level::TRACE)
         {
@@ -904,9 +864,62 @@ impl ChannelFactory {
             hash.reverse();
             debug!("Hash           : {:?}", hash.to_vec().to_hex());
         }
-        let hash: Target = hash.into();
 
-        if hash <= bitcoin_target {
+        let target_hash: Target = hash.into();
+
+        let share_status = if target_hash <= bitcoin_target {
+            ShareValidation::Bitcoin
+        } else if target_hash <= upstream_target {
+            ShareValidation::Upstream
+        } else if target_hash <= downstream_target {
+            ShareValidation::Downstream
+        } else {
+            ShareValidation::Invalid
+        };
+
+        let share_status_mapped = match share_status {
+            ShareValidation::Bitcoin => ShareStatus::NetworkValid,
+            ShareValidation::Upstream => ShareStatus::PoolValid,
+            ShareValidation::Downstream => ShareStatus::MinerValid,
+            ShareValidation::Invalid => ShareStatus::Invalid,
+        };
+
+        // NOMIUM share_log injection ----
+        let user_identity = match &m {
+            Share::Extended(share) => std::str::from_utf8(share.user_identity.as_ref())
+                .unwrap_or("invalid_utf8")
+                .to_string(),
+            Share::Standard(_) => panic!("Expected Extended share, got Standard"),
+        };
+
+        let received_at = shares_logger::get_utc_now();
+
+        match self.kind {
+            ExtendedChannelKind::Pool => {},
+            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
+                let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                    m.get_channel_id(),
+                    m.get_sequence_number(),
+                    m.get_job_id(),
+                    m.get_nonce(),
+                    m.get_n_time(),
+                    m.get_version(),
+                    hash,
+                    downstream_target.clone(),
+                    extranonce.to_vec(),
+                    user_identity,
+                    received_at,
+                    share_status_mapped,
+                );
+                info!("Calling share logging for PROXY");
+                shares_logger::log_share(share_log);
+                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc();
+            }
+        }
+        // ---- NOMIUM share_log injection ----
+
+        match share_status {
+            ShareValidation::Bitcoin => {
             let mut print_hash = hash_.as_hash().into_inner();
             print_hash.reverse();
 
@@ -955,7 +968,8 @@ impl ChannelFactory {
                     extranonce.to_vec(),
                 ))),
             }
-        } else if hash <= upstream_target {
+        }, 
+        ShareValidation::Upstream => {
             match self.kind {
                 ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
                     let upstream_extranonce_space = self.extranonces.get_range0_len();
@@ -968,9 +982,11 @@ impl ChannelFactory {
                     Ok(OnNewShare::SendSubmitShareUpstream((m, template_id)))
                 }
             }
-        } else if hash <= downstream_target {
+        },
+        ShareValidation::Downstream => {
             Ok(OnNewShare::ShareMeetDownstreamTarget)
-        } else {
+        },
+        ShareValidation::Invalid => {
             error!("Share does not meet any target: {:?}", m);
             let error = SubmitSharesError {
                 channel_id: m.get_channel_id(),
@@ -984,6 +1000,7 @@ impl ChannelFactory {
             };
             SHRT_DIFFICULTY_TOO_LOW_IN_CHANNEL_FACTORY.inc();
             Ok(OnNewShare::SendErrorDownstream(error))
+        }
         }
     }
     /// Returns the downstream target and extranonce for the channel
