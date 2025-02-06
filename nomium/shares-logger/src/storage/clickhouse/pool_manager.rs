@@ -7,10 +7,6 @@ use std::time::Duration;
 use log::error;
 use log::debug;
 
-const MAX_RETRIES: u32 = 100500;
-const BASE_DELAY: Duration = Duration::from_millis(100);
-const MAX_DELAY: Duration = Duration::from_secs(1);
-
 pub struct ConnectionPool {
     connections: Vec<Arc<Mutex<Option<Client>>>>,
     pool_size: usize,
@@ -43,10 +39,11 @@ impl ConnectionPool {
 
     async fn create_new_connection(&self) -> Result<Arc<Mutex<Option<Client>>>, ClickhouseError> {
         debug!("Starting new connection creation process");
-        let mut delay = BASE_DELAY;
+        let mut delay = Duration::from_millis(SETTINGS.clickhouse.base_retry_delay_ms);
+        let max_delay = Duration::from_secs(SETTINGS.clickhouse.max_retry_delay_secs);
         let mut attempts = 0;
-
-        while attempts < MAX_RETRIES {
+        
+        while attempts < SETTINGS.clickhouse.max_connection_retries {
             match self.try_create_connection().await {
                 Ok(client) => {
                     debug!("Successfully created new connection after {} attempts", attempts + 1);
@@ -56,9 +53,9 @@ impl ConnectionPool {
                 Err(e) => {
                     error!("Failed to create connection: {}", e);
                     debug!("Retrying connection in {}ms (attempt {}/{})", 
-                        delay.as_millis(), attempts + 1, MAX_RETRIES);
+                        delay.as_millis(), attempts + 1, SETTINGS.clickhouse.max_connection_retries);
                     tokio::time::sleep(delay).await;
-                    delay = std::cmp::min(delay * 2, MAX_DELAY);
+                    delay = std::cmp::min(delay * 2, max_delay);
                     attempts += 1;
                 }
             }
