@@ -5,6 +5,7 @@ username = "default"
 password = "5555"
 batch_size = 1000
 batch_flush_interval_secs = 5
+pool_size = 5
 
 [processing]
 primary_channel_buffer_size = 10000

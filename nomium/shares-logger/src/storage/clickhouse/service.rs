@@ -8,46 +8,54 @@ use log::info;
 use std::time::Duration;
 use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
 use log::error;
+use crate::storage::clickhouse::ConnectionPool;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
-    client: Client,
+    //client: Client,
     batch: Vec<ShareLog>,
     last_flush: std::time::Instant,
+    pool: Arc<ConnectionPool>,
 }
 
 #[derive(Clone)]
 pub struct ClickhouseBlockStorage {
-    client: Client,
+    //client: Client,
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
+    pool: Arc<ConnectionPool>,
 }
 
 impl ClickhouseStorage {
-    pub fn new() -> Result<Self, ClickhouseError> {
-        info!("Initializing ClickhouseStorage...");
-        let client = Client::default()
-            .with_url(&SETTINGS.clickhouse.url)
-            .with_database(&SETTINGS.clickhouse.database)
-            .with_user(&SETTINGS.clickhouse.username)
-            .with_password(&SETTINGS.clickhouse.password);
 
+    pub fn new() -> Result<Self, ClickhouseError> {
+        let pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
         Ok(Self {
-            client,
+            pool,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         })
     }
 
+    async fn get_client(&self) -> Result<Client, ClickhouseError> {
+        let conn = self.pool.get_connection().await?;
+        let client = conn.lock().await.clone().ok_or_else(|| 
+            ClickhouseError::ConnectionError("No client available".into())
+        )?;
+        Ok(client)
+    }
+
     async fn ensure_table_exists(&self) -> Result<(), ClickhouseError> {
         info!("Checking existence of shares table");
 
-        self.client.query(CREATE_SHARES_TABLE)
+        let client = self.get_client().await?;
+        client.query(CREATE_SHARES_TABLE)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create shares table: {}", e)))?;
 
-        self.client.query(CREATE_HASHRATE_VIEW)
+        client.query(CREATE_HASHRATE_VIEW)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create materialized view: {}", e)))?;
@@ -60,23 +68,28 @@ impl ClickhouseStorage {
 impl ClickhouseBlockStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
         info!("Initializing ClickhouseBlockStorage...");
-        let client = Client::default()
-            .with_url(&SETTINGS.clickhouse.url)
-            .with_database(&SETTINGS.clickhouse.database)
-            .with_user(&SETTINGS.clickhouse.username)
-            .with_password(&SETTINGS.clickhouse.password);
-
+        let pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
+        
         Ok(Self {
-            client,
+            pool,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         })
     }
 
+    async fn get_client(&self) -> Result<Client, ClickhouseError> {
+        let conn = self.pool.get_connection().await?;
+        let client = conn.lock().await.clone().ok_or_else(|| 
+            ClickhouseError::ConnectionError("No client available".into())
+        )?;
+        Ok(client)
+    }
+
     async fn ensure_blocks_table_exists(&self) -> Result<(), ClickhouseError> {
         info!("Checking existence of blocks table");
 
-        self.client.query(CREATE_BLOCKS_TABLE)
+        let client = self.get_client().await?;
+        client.query(CREATE_BLOCKS_TABLE)
             .execute()
             .await
             .map_err(|e| ClickhouseError::TableCreationError(format!("Failed to create blocks table: {}", e)))?;
@@ -116,7 +129,8 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
         let batch_size = self.batch.len();
         info!("Flushing batch of {} records", batch_size);
 
-        let mut batch_inserter = self.client.insert("shares")
+        let client = self.get_client().await?;
+        let mut batch_inserter = client.insert("shares")
             .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
 
         for share in self.batch.drain(..) {
@@ -145,7 +159,8 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         let block_data = ClickhouseBlock::from(block);
         info!("Block data for insert: {:?}", block_data);
         
-        let mut batch_inserter = match self.client.insert("blocks") {
+        let client = self.get_client().await?;
+        let mut batch_inserter = match client.insert("blocks") {
             Ok(inserter) => {
                 info!("Created batch inserter successfully");
                 inserter
@@ -185,7 +200,8 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         let batch_size = self.batch.len();
         info!("Flushing batch of {} block records", batch_size);
 
-        let mut batch_inserter = self.client.insert("blocks")
+        let client = self.get_client().await?;
+        let mut batch_inserter = client.insert("blocks")
             .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
 
         for block in self.batch.drain(..) {
