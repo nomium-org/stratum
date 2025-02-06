@@ -106,17 +106,18 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
 
     async fn store_share(&mut self, share: ShareLog) -> Result<(), ClickhouseError> {
         self.batch.push(share);
-        let should_flush = self.batch.len() >= SETTINGS.clickhouse.batch_size || 
-                          self.last_flush.elapsed() >= Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
+        let should_flush =
+            self.batch.len() >= SETTINGS.clickhouse.batch_size ||
+            self.last_flush.elapsed() >= std::time::Duration::from_secs(SETTINGS.clickhouse.batch_flush_interval_secs);
         if should_flush {
-            ShareStorage::<ShareLog>::flush(self).await?;
+            self.flush().await?;
         }
         Ok(())
     }
 
     async fn store_batch(&mut self, shares: Vec<ShareLog>) -> Result<(), ClickhouseError> {
         for share in shares {
-            ShareStorage::<ShareLog>::store_share(self, share).await?;
+            self.store_share(share).await?;
         }
         Ok(())
     }
@@ -126,24 +127,30 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
             return Ok(());
         }
 
-        let batch_size = self.batch.len();
-        info!("Flushing batch of {} records", batch_size);
+        let batch_to_flush = self.batch.clone();
+        let batch_size = batch_to_flush.len();
+        log::info!("Flushing batch of {} records", batch_size);
 
         let client = self.get_client().await?;
         let mut batch_inserter = client.insert("shares")
             .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
 
-        for share in self.batch.drain(..) {
-            let clickhouse_share = ClickhouseShare::from(share);
-            batch_inserter.write(&clickhouse_share).await
-                .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        for share in batch_to_flush.iter() {
+            let clickhouse_share = ClickhouseShare::from(share.clone());
+            if let Err(e) = batch_inserter.write(&clickhouse_share).await {
+                log::error!("Failed to write share during flush: {}. Retrying later.", e);
+                return Err(ClickhouseError::BatchInsertError(e.to_string()));
+            }
         }
 
-        batch_inserter.end().await
-            .map_err(|e| ClickhouseError::BatchInsertError(e.to_string()))?;
+        if let Err(e) = batch_inserter.end().await {
+            log::error!("Failed to complete batch insert: {}. Retrying later.", e);
+            return Err(ClickhouseError::BatchInsertError(e.to_string()));
+        }
 
+        self.batch.clear();
         self.last_flush = std::time::Instant::now();
-        info!("Successfully flushed {} records", batch_size);
+        log::info!("Successfully flushed {} records", batch_size);
         Ok(())
     }
 }
