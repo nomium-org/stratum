@@ -14,6 +14,7 @@ pub struct ClickhouseSettings {
     pub password: String,
     pub batch_size: usize,
     pub batch_flush_interval_secs: u64,
+    pub pool_size: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]
