@@ -6,6 +6,9 @@ password = "5555"
 batch_size = 1000
 batch_flush_interval_secs = 5
 pool_size = 5
+max_connection_retries = 100500
+base_retry_delay_ms = 100
+max_retry_delay_secs = 1
 
 [processing]
 primary_channel_buffer_size = 10000
