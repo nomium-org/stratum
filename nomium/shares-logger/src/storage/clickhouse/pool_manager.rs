@@ -52,12 +52,7 @@ impl ConnectionPool {
                         return Ok(conn.clone());
                     }
                 }
-            }
-        }
-        
-        for conn in &self.connections {
-            let mut conn_guard = conn.lock().await;
-            if conn_guard.client.is_none() {
+                
                 match self.try_create_connection().await {
                     Ok(client) => {
                         conn_guard.client = Some(client);
