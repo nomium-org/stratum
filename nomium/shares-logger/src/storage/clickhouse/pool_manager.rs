@@ -65,11 +65,16 @@ impl ConnectionPool {
 
     async fn try_create_connection(&self) -> Result<Client, ClickhouseError> {
         debug!("Attempting to create connection to {}", SETTINGS.clickhouse.url);
-        Ok(Client::default()
+        let client = Client::default()
             .with_url(&SETTINGS.clickhouse.url)
             .with_database(&SETTINGS.clickhouse.database)
             .with_user(&SETTINGS.clickhouse.username)
-            .with_password(&SETTINGS.clickhouse.password))
+            .with_password(&SETTINGS.clickhouse.password);
+        
+        match Self::is_connection_alive(&client).await {
+            true => Ok(client),
+            false => Err(ClickhouseError::ConnectionError("Client connection check failed".into())),
+        }
     }
 
     async fn is_connection_alive(client: &Client) -> bool {
