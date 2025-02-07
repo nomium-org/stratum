@@ -5,15 +5,12 @@ use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use clickhouse::Client;
 use log::info;
-use std::time::Duration;
 use super::queries::{CREATE_SHARES_TABLE, CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW};
-use log::error;
 use crate::storage::clickhouse::ConnectionPool;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ClickhouseStorage {
-    //client: Client,
     batch: Vec<ShareLog>,
     last_flush: std::time::Instant,
     pool: Arc<ConnectionPool>,
@@ -21,14 +18,12 @@ pub struct ClickhouseStorage {
 
 #[derive(Clone)]
 pub struct ClickhouseBlockStorage {
-    //client: Client,
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
     pool: Arc<ConnectionPool>,
 }
 
 impl ClickhouseStorage {
-
     pub fn new() -> Result<Self, ClickhouseError> {
         let pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
         Ok(Self {
@@ -40,9 +35,13 @@ impl ClickhouseStorage {
 
     async fn get_client(&self) -> Result<Client, ClickhouseError> {
         let conn = self.pool.get_connection().await?;
-        let client = conn.lock().await.clone().ok_or_else(|| 
-            ClickhouseError::ConnectionError("No client available".into())
-        )?;
+        let client = {
+            let conn_guard = conn.lock().await;
+            conn_guard.client.clone().ok_or_else(|| 
+                ClickhouseError::ConnectionError("No client available".into())
+            )?
+        };
+        self.pool.release_connection(conn).await;
         Ok(client)
     }
 
@@ -79,9 +78,13 @@ impl ClickhouseBlockStorage {
 
     async fn get_client(&self) -> Result<Client, ClickhouseError> {
         let conn = self.pool.get_connection().await?;
-        let client = conn.lock().await.clone().ok_or_else(|| 
-            ClickhouseError::ConnectionError("No client available".into())
-        )?;
+        let client = {
+            let conn_guard = conn.lock().await;
+            conn_guard.client.clone().ok_or_else(|| 
+                ClickhouseError::ConnectionError("No client available".into())
+            )?
+        };
+        self.pool.release_connection(conn).await;
         Ok(client)
     }
 

@@ -4,11 +4,18 @@ use clickhouse::Client;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::time::Duration;
+use std::time::Instant;
 use log::error;
 use log::debug;
 
+pub struct PooledConnection {
+    pub client: Option<Client>,
+    in_use: bool,
+    last_used: Instant,
+}
+
 pub struct ConnectionPool {
-    connections: Vec<Arc<Mutex<Option<Client>>>>,
+    connections: Vec<Arc<Mutex<PooledConnection>>>,
     pool_size: usize,
 }
 
@@ -16,7 +23,11 @@ impl ConnectionPool {
     pub fn new(pool_size: usize) -> Self {
         debug!("Initializing connection pool with size {}", pool_size);
         let connections = (0..pool_size)
-            .map(|_| Arc::new(Mutex::new(None)))
+            .map(|_| Arc::new(Mutex::new(PooledConnection {
+                client: None,
+                in_use: false,
+                last_used: Instant::now(),
+            })))
             .collect();
         Self {
             connections,
@@ -24,20 +35,37 @@ impl ConnectionPool {
         }
     }
 
-    pub async fn get_connection(&self) -> Result<Arc<Mutex<Option<Client>>>, ClickhouseError> {
+    pub async fn get_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
         debug!("Attempting to get connection from pool");
+        
         for conn in &self.connections {
-            if let Some(client) = &*conn.lock().await {
-                if Self::is_connection_alive(client).await {
-                    debug!("Found alive connection in pool");
-                    return Ok(conn.clone());
+            let mut conn_guard = conn.lock().await;
+            if !conn_guard.in_use {
+                if let Some(client) = &conn_guard.client {
+                    if Self::is_connection_alive(client).await {
+                        conn_guard.in_use = true;
+                        debug!("Found and reserved alive connection from pool");
+                        return Ok(conn.clone());
+                    }
                 }
             }
         }
-        self.create_new_connection().await
+        
+        let new_conn = self.create_new_connection().await?;
+        let mut conn_guard = new_conn.lock().await;
+        conn_guard.in_use = true;
+        drop(conn_guard);
+        Ok(new_conn)
     }
 
-    async fn create_new_connection(&self) -> Result<Arc<Mutex<Option<Client>>>, ClickhouseError> {
+    pub async fn release_connection(&self, conn: Arc<Mutex<PooledConnection>>) {
+        let mut conn_guard = conn.lock().await;
+        conn_guard.in_use = false;
+        conn_guard.last_used = Instant::now();
+        debug!("Connection released back to pool");
+    }
+
+    async fn create_new_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
         debug!("Starting new connection creation process");
         let mut delay = Duration::from_millis(SETTINGS.clickhouse.base_retry_delay_ms);
         let max_delay = Duration::from_secs(SETTINGS.clickhouse.max_retry_delay_secs);
@@ -47,7 +75,11 @@ impl ConnectionPool {
             match self.try_create_connection().await {
                 Ok(client) => {
                     debug!("Successfully created new connection after {} attempts", attempts + 1);
-                    let conn = Arc::new(Mutex::new(Some(client)));
+                    let conn = Arc::new(Mutex::new(PooledConnection {
+                        client: Some(client),
+                        in_use: false,
+                        last_used: Instant::now(),
+                    }));
                     return Ok(conn);
                 }
                 Err(e) => {
