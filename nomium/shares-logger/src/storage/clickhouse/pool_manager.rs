@@ -1,10 +1,11 @@
 use crate::errors::ClickhouseError;
 use crate::config::SETTINGS;
+use crate::storage::clickhouse::retry::RetryConfig;
 use clickhouse::Client;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use std::time::Instant;
-use log::debug;
+use log::{debug, warn, error};
 
 pub struct PooledConnection {
     pub client: Option<Client>,
@@ -16,11 +17,18 @@ pub struct ConnectionPool {
     connections: Vec<Arc<Mutex<PooledConnection>>>,
     pool_size: usize,
     semaphore: Arc<Semaphore>,
+    retry_config: RetryConfig,
 }
 
 impl ConnectionPool {
     pub fn new(pool_size: usize) -> Self {
         debug!("Initializing connection pool with size {}", pool_size);
+        let retry_config = RetryConfig::new(
+            SETTINGS.clickhouse.max_connection_retries,
+            SETTINGS.clickhouse.base_retry_delay_ms,
+            SETTINGS.clickhouse.max_retry_delay_secs,
+        );
+
         let connections = (0..pool_size)
             .map(|_| Arc::new(Mutex::new(PooledConnection {
                 client: None,
@@ -28,20 +36,40 @@ impl ConnectionPool {
                 last_used: Instant::now(),
             })))
             .collect();
+
         Self {
             connections,
             pool_size,
             semaphore: Arc::new(Semaphore::new(pool_size)),
+            retry_config,
+        }
+    }
+
+    async fn try_create_connection_with_retry(&self) -> Result<Client, ClickhouseError> {
+        let mut attempt = 0;
+        loop {
+            attempt += 1;
+            match self.try_create_connection().await {
+                Ok(client) => return Ok(client),
+                Err(e) => {
+                    if attempt >= self.retry_config.max_retries {
+                        error!("Max connection retries ({}) reached", self.retry_config.max_retries);
+                        return Err(e);
+                    }
+                    let delay = self.retry_config.get_delay(attempt);
+                    warn!("Connection attempt {} failed, retrying after {:?}: {}", attempt, delay, e);
+                    tokio::time::sleep(delay).await;
+                }
+            }
         }
     }
 
     pub async fn get_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
         debug!("Attempting to get connection from pool");
-        
         let _permit = self.semaphore.acquire().await.map_err(|e| 
             ClickhouseError::ConnectionError(format!("Failed to acquire semaphore: {}", e))
         )?;
-        
+
         for conn in &self.connections {
             let mut conn_guard = conn.lock().await;
             if !conn_guard.in_use {
@@ -53,7 +81,7 @@ impl ConnectionPool {
                     }
                 }
                 
-                match self.try_create_connection().await {
+                match self.try_create_connection_with_retry().await {
                     Ok(client) => {
                         conn_guard.client = Some(client);
                         conn_guard.in_use = true;
@@ -68,7 +96,7 @@ impl ConnectionPool {
                 }
             }
         }
-        
+
         self.semaphore.add_permits(1);
         Err(ClickhouseError::ConnectionError("All pool slots are occupied".into()))
     }
