@@ -3,9 +3,7 @@ use crate::config::SETTINGS;
 use clickhouse::Client;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
-use std::time::Duration;
 use std::time::Instant;
-use log::error;
 use log::debug;
 
 pub struct PooledConnection {
@@ -57,11 +55,27 @@ impl ConnectionPool {
             }
         }
         
-        let new_conn = self.create_new_connection().await?;
-        let mut conn_guard = new_conn.lock().await;
-        conn_guard.in_use = true;
-        drop(conn_guard);
-        Ok(new_conn)
+        for conn in &self.connections {
+            let mut conn_guard = conn.lock().await;
+            if conn_guard.client.is_none() {
+                match self.try_create_connection().await {
+                    Ok(client) => {
+                        conn_guard.client = Some(client);
+                        conn_guard.in_use = true;
+                        conn_guard.last_used = Instant::now();
+                        debug!("Created new client in existing slot");
+                        return Ok(conn.clone());
+                    }
+                    Err(e) => {
+                        self.semaphore.add_permits(1);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        
+        self.semaphore.add_permits(1);
+        Err(ClickhouseError::ConnectionError("All pool slots are occupied".into()))
     }
 
     pub async fn release_connection(&self, conn: Arc<Mutex<PooledConnection>>) {
@@ -74,36 +88,6 @@ impl ConnectionPool {
 
     pub fn available_connections(&self) -> usize {
         self.semaphore.available_permits()
-    }
-
-    async fn create_new_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
-        debug!("Starting new connection creation process");
-        let mut delay = Duration::from_millis(SETTINGS.clickhouse.base_retry_delay_ms);
-        let max_delay = Duration::from_secs(SETTINGS.clickhouse.max_retry_delay_secs);
-        let mut attempts = 0;
-        
-        while attempts < SETTINGS.clickhouse.max_connection_retries {
-            match self.try_create_connection().await {
-                Ok(client) => {
-                    debug!("Successfully created new connection after {} attempts", attempts + 1);
-                    let conn = Arc::new(Mutex::new(PooledConnection {
-                        client: Some(client),
-                        in_use: false,
-                        last_used: Instant::now(),
-                    }));
-                    return Ok(conn);
-                }
-                Err(e) => {
-                    error!("Failed to create connection: {}", e);
-                    debug!("Retrying connection in {}ms (attempt {}/{})", 
-                        delay.as_millis(), attempts + 1, SETTINGS.clickhouse.max_connection_retries);
-                    tokio::time::sleep(delay).await;
-                    delay = std::cmp::min(delay * 2, max_delay);
-                    attempts += 1;
-                }
-            }
-        }
-        Err(ClickhouseError::ConnectionError("Max retries exceeded".into()))
     }
 
     async fn try_create_connection(&self) -> Result<Client, ClickhouseError> {
