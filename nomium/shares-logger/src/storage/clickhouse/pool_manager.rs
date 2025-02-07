@@ -2,7 +2,7 @@ use crate::errors::ClickhouseError;
 use crate::config::SETTINGS;
 use clickhouse::Client;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 use std::time::Duration;
 use std::time::Instant;
 use log::error;
@@ -17,6 +17,7 @@ pub struct PooledConnection {
 pub struct ConnectionPool {
     connections: Vec<Arc<Mutex<PooledConnection>>>,
     pool_size: usize,
+    semaphore: Arc<Semaphore>,
 }
 
 impl ConnectionPool {
@@ -32,11 +33,16 @@ impl ConnectionPool {
         Self {
             connections,
             pool_size,
+            semaphore: Arc::new(Semaphore::new(pool_size)),
         }
     }
 
     pub async fn get_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
         debug!("Attempting to get connection from pool");
+        
+        let _permit = self.semaphore.acquire().await.map_err(|e| 
+            ClickhouseError::ConnectionError(format!("Failed to acquire semaphore: {}", e))
+        )?;
         
         for conn in &self.connections {
             let mut conn_guard = conn.lock().await;
@@ -63,6 +69,11 @@ impl ConnectionPool {
         conn_guard.in_use = false;
         conn_guard.last_used = Instant::now();
         debug!("Connection released back to pool");
+        self.semaphore.add_permits(1);
+    }
+
+    pub fn available_connections(&self) -> usize {
+        self.semaphore.available_permits()
     }
 
     async fn create_new_connection(&self) -> Result<Arc<Mutex<PooledConnection>>, ClickhouseError> {
