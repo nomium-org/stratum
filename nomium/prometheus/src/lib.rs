@@ -124,6 +124,10 @@ lazy_static! {
         register_int_gauge!("shalog_backup_channel_current",
             "Current number of shares in backup channel").unwrap();
 
+    pub static ref SHALOG_BATCH_SIZE_CURRENT: IntGauge = register_int_gauge!(
+        "shalog_batch_size_current",
+            "Current number of shares in the batch waiting to be flushed to Clickhouse").unwrap();
+
 }
 
 pub fn start_metrics_server() {
