@@ -65,46 +65,46 @@ fn default_upstream_config() -> UpstreamDifficultyConfig {
 
 impl ProxyConfig {
     pub fn apply_env_overrides(mut self) -> Self {
-        if let Ok(addr) = env::var("UPSTREAM_ADDRESS") {
+        if let Ok(addr) = env::var("TPROXY_CONFIG_UPSTREAM_ADDRESS") {
             self.upstream_address = addr;
         }
-        if let Ok(port) = env::var("UPSTREAM_PORT") {
+        if let Ok(port) = env::var("TPROXY_CONFIG_UPSTREAM_PORT") {
             if let Ok(port) = port.parse() {
                 self.upstream_port = port;
             }
         }
-        if let Ok(pubkey) = env::var("UPSTREAM_AUTHORITY_PUBKEY") {
+        if let Ok(pubkey) = env::var("TPROXY_CONFIG_UPSTREAM_AUTHORITY_PUBKEY") {
             if let Ok(key) = pubkey.parse() {
                 self.upstream_authority_pubkey = key;
             }
         }
-        if let Ok(addr) = env::var("DOWNSTREAM_ADDRESS") {
+        if let Ok(addr) = env::var("TPROXY_CONFIG_DOWNSTREAM_ADDRESS") {
             self.downstream_address = addr;
         }
-        if let Ok(port) = env::var("DOWNSTREAM_PORT") {
+        if let Ok(port) = env::var("TPROXY_CONFIG_DOWNSTREAM_PORT") {
             if let Ok(port) = port.parse() {
                 self.downstream_port = port;
             }
         }
 
-        if let Ok(hashrate) = env::var("MIN_MINER_HASHRATE") {
+        if let Ok(hashrate) = env::var("TPROXY_CONFIG_MIN_MINER_HASHRATE") {
             if let Ok(hashrate) = hashrate.parse() {
                 self.downstream_difficulty_config
                     .min_individual_miner_hashrate = hashrate;
             }
         }
-        if let Ok(shares) = env::var("SHARES_PER_MINUTE") {
+        if let Ok(shares) = env::var("TPROXY_CONFIG_SHARES_PER_MINUTE") {
             if let Ok(shares) = shares.parse() {
                 self.downstream_difficulty_config.shares_per_minute = shares;
             }
         }
 
-        if let Ok(interval) = env::var("CHANNEL_DIFF_UPDATE_INTERVAL") {
+        if let Ok(interval) = env::var("TPROXY_CONFIG_CHANNEL_DIFF_UPDATE_INTERVAL") {
             if let Ok(interval) = interval.parse() {
                 self.upstream_difficulty_config.channel_diff_update_interval = interval;
             }
         }
-        if let Ok(hashrate) = env::var("CHANNEL_NOMINAL_HASHRATE") {
+        if let Ok(hashrate) = env::var("TPROXY_CONFIG_CHANNEL_NOMINAL_HASHRATE") {
             if let Ok(hashrate) = hashrate.parse() {
                 self.upstream_difficulty_config.channel_nominal_hashrate = hashrate;
             }
