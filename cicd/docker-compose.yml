@@ -29,7 +29,7 @@ services:
 #          - POOL__TP_ADDRESS=${NODE_HOST}:${NODE_PORT}
           - TPROXY_LOG_LEVEL_FILE=ERROR
           - TPROXY_LOG_LEVEL_CONSOLE=ERROR
-        container_name: pool_${NODE_NET}
+        container_name: pool
         network_mode: host
  
     translator:
@@ -52,5 +52,5 @@ services:
           - TPROXY_LOG_LEVEL_CONSOLE=DEBUG
 #          - TPROXY_UPSTREAM_PORT=${POOL_PORT}
 #          - TPROXY_DOWNSTREAM_PORT=${TPROXY_PORT}
-        container_name: translator_${NODE_NET}
+        container_name: translator
         network_mode: host
