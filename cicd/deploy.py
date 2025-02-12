@@ -30,8 +30,8 @@ data = {
         {"name": "CLICKHOUSE_PASSWORD", "value": CLICKHOUSE_PASSWORD},
         {"name": "NEXUS_URL", "value": NEXUS_URL},
         {"name": "REDROCK_API_URL", "value": REDROCK_API_URL},
-        {"name": "REDROCK_API_KEY", "value": REDROCK_API_KEY},
-        {"name": "NODE_NET", "value": NODE_NET}
+        {"name": "REDROCK_API_KEY", "value": REDROCK_API_KEY}#,
+ #       {"name": "NODE_NET", "value": NODE_NET}
     ],
     "prune": False,
     "pullImage": True,
