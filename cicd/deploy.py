@@ -68,6 +68,7 @@ data = {
         {"name": "REDROCK_API_URL", "value": REDROCK_API_URL},
         {"name": "REDROCK_API_KEY", "value": REDROCK_API_KEY},
         {"name": "NODE_CHAIN", "value": NODE_CHAIN},
+        {"name": "NODE_HOST", "value": NODE_HOST},
         {"name": "NODE_PORT", "value": NODE_PORT},
         {"name": "NODE_KEY", "value": NODE_KEY},
         {"name": "COINBASE_TYPE", "value": COINBASE_TYPE},
