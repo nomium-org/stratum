@@ -51,7 +51,7 @@ services:
           - TPROXY_LOG_LEVEL_FILE=DEBUG
           - TPROXY_LOG_LEVEL_CONSOLE=DEBUG
           - TPROXY_METRICS_PORT=${METRICS_PORT}
-          - TPROXY_UPSTREAM_PORT=${POOL_PORT}
-          - TPROXY_DOWNSTREAM_PORT=${TRANSLATOR_PORT}
+          - TPROXY_CONFIG_UPSTREAM_PORT=${POOL_PORT}
+          - TPROXY_CONFIG_DOWNSTREAM_PORT=${TRANSLATOR_PORT}
         container_name: translator_${NODE_CHAIN}
         network_mode: host
