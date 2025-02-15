@@ -17,7 +17,7 @@ NODE_HOST = os.getenv("NODE_HOST")
 
 if NODE_CHAIN == 'pooltest':
     STACK_ID = os.getenv("POOLTEST_STRATUM_STACK_ID")
-    ENDPOINT_ID = os.getenv("POOLTEST_STRATUM_PENDPOINT_ID")
+    ENDPOINT_ID = os.getenv("POOLTEST_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("POOLTEST_NODE_PORT")
     NODE_KEY = os.getenv("POOLTEST_NODE_KEY")
     COINBASE_TYPE = os.getenv("POOLTEST_COINBASE_TYPE")
@@ -28,7 +28,7 @@ if NODE_CHAIN == 'pooltest':
     
 elif NODE_CHAIN == 'testnet':
     STACK_ID = os.getenv("TESTNET_STRATUM_STACK_ID")
-    ENDPOINT_ID = os.getenv("TESTNET_STRATUM_PENDPOINT_ID")
+    ENDPOINT_ID = os.getenv("TESTNET_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("TESTNET_NODE_PORT")
     NODE_KEY = os.getenv("TESTNET_NODE_KEY")
     COINBASE_TYPE = os.getenv("TESTNET_COINBASE_TYPE")
@@ -39,7 +39,7 @@ elif NODE_CHAIN == 'testnet':
 
 elif NODE_CHAIN == 'mainnet':
     STACK_ID = os.getenv("MAINNET_STRATUM_STACK_ID")
-    ENDPOINT_ID = os.getenv("MAINNET_STRATUM_PENDPOINT_ID")
+    ENDPOINT_ID = os.getenv("MAINNET_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("MAINNET_NODE_PORT")
     NODE_KEY = os.getenv("MAINNET_NODE_KEY")
     COINBASE_TYPE = os.getenv("MAINNET_COINBASE_TYPE")
