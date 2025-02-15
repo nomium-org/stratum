@@ -29,7 +29,7 @@ services:
           - POOL__TP_AUTHORITY_PUBLIC_KEY=${NODE_KEY}
           - TPROXY_LOG_LEVEL_FILE=ERROR
           - TPROXY_LOG_LEVEL_CONSOLE=ERROR
-        container_name: pool
+        container_name: pool_${NODE_CHAIN}
         network_mode: host
  
     translator:
@@ -53,5 +53,5 @@ services:
           - TPROXY_METRICS_PORT=${METRICS_PORT}
           - TPROXY_UPSTREAM_PORT=${POOL_PORT}
           - TPROXY_DOWNSTREAM_PORT=${TRANSLATOR_PORT}
-        container_name: translator
+        container_name: translator_${NODE_CHAIN}
         network_mode: host
