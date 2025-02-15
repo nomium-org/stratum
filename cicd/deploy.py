@@ -13,6 +13,7 @@ STRATUM_BRANCH = os.getenv("STRATUM_BRANCH")
 REDROCK_API_URL = os.getenv("REDROCK_API_URL")
 REDROCK_API_KEY = os.getenv("REDROCK_API_KEY")
 NODE_CHAIN = os.getenv("NODE_CHAIN")
+NODE_HOST = os.getenv("NODE_HOST")
 
 if NODE_CHAIN == 'pooltest':
     STACK_ID = os.getenv("POOLTEST_STRATUM_STACK_ID")
