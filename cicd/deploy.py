@@ -15,7 +15,7 @@ REDROCK_API_KEY = os.getenv("REDROCK_API_KEY")
 NODE_CHAIN = os.getenv("NODE_CHAIN")
 NODE_HOST = os.getenv("NODE_HOST")
 
-if NODE_CHAIN == 'pooltest':
+if NODE_CHAIN == 'PoolTest':
     STACK_ID = os.getenv("POOLTEST_STRATUM_STACK_ID")
     ENDPOINT_ID = os.getenv("POOLTEST_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("POOLTEST_NODE_PORT")
@@ -26,7 +26,7 @@ if NODE_CHAIN == 'pooltest':
     TRANSLATOR_PORT = os.getenv("POOLTEST_TRANSLATOR_PORT")
     METRICS_PORT = os.getenv("POOLTEST_METRICS_PORT")
     
-elif NODE_CHAIN == 'testnet':
+elif NODE_CHAIN == 'TestNet':
     STACK_ID = os.getenv("TESTNET_STRATUM_STACK_ID")
     ENDPOINT_ID = os.getenv("TESTNET_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("TESTNET_NODE_PORT")
@@ -37,7 +37,7 @@ elif NODE_CHAIN == 'testnet':
     TRANSLATOR_PORT = os.getenv("TESTNET_TRANSLATOR_PORT")
     METRICS_PORT = os.getenv("TESTNET_METRICS_PORT")
 
-elif NODE_CHAIN == 'mainnet':
+elif NODE_CHAIN == 'MainNet':
     STACK_ID = os.getenv("MAINNET_STRATUM_STACK_ID")
     ENDPOINT_ID = os.getenv("MAINNET_STRATUM_ENDPOINT_ID")
     NODE_PORT = os.getenv("MAINNET_NODE_PORT")
