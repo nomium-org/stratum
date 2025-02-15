@@ -52,6 +52,11 @@ else:
     print("Variable NODE_CHAIN is not valid")
     exit(1)
 
+print(POOLTEST_STRATUM_STACK_ID)
+print(STACK_ID)
+print("NODE!!!")
+print(NODE_HOST)
+
 url = f"http://{PORTAINER_HOST}:{PORTAINER_PORT}/api/stacks/{STACK_ID}/git/redeploy?endpointId={ENDPOINT_ID}"
 
 headers = {
