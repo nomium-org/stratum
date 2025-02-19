@@ -1,14 +1,15 @@
+#[rustfmt::skip]
 use crate::metrics::{
-    SHARES_VALID_JOBID, 
     ACTIVE_CONNECTIONS, 
-    SHARES_RECEIVED, 
     CONNECTION_ATTEMPTS, 
-    CONNECTION_FAILURES, 
     CONNECTION_AUTH_FAILURES, 
+    CONNECTION_FAILURES,
     CONNECTION_TIMEOUT_FAILURES, 
+    REFUSED_SHARES_SUMMARY, 
+    SHARES_RECEIVED, 
+    SHARES_VALID_JOBID,
+    SHRT_FN_HANDLE_SUBMIT_REFUSED, 
     SHRT_SAVE_SHARE_TO_VARDIFF,
-    SHRT_FN_HANDLE_SUBMIT_REFUSED,
-    REFUSED_SHARES_SUMMARY
 };
 
 use crate::{
@@ -567,23 +568,23 @@ impl IsServer<'static> for Downstream {
     /// https://bitcoin.stackexchange.com/questions/29416/how-do-pool-servers-handle-multiple-workers-sharing-one-connection-with-stratum
     fn handle_authorize(&self, request: &client_to_server::Authorize) -> bool {
         let worker_name = request.name.to_string();
-    
+
         let handle = std::thread::spawn(move || {
             let api_url = env::var("REDROCK_API_URL")
                 .expect("REDROCK_API_URL must be set in environment variables");
-    
+
             let api_key = env::var("REDROCK_API_KEY")
                 .expect("REDROCK_API_KEY must be set in environment variables");
-    
+
             let timeout_seconds = env::var("REDROCK_TIMEOUT_SECONDS")
                 .map(|timeout| timeout.parse::<u64>().expect("Invalid timeout value"))
                 .expect("REDROCK_TIMEOUT_SECONDS must be set in environment variables");
-    
+
             let client = reqwest::blocking::Client::builder()
                 .timeout(std::time::Duration::from_secs(timeout_seconds))
                 .build()
                 .unwrap();
-    
+
             let result = client
                 .post(&api_url)
                 .header("X-Api-Key", api_key)
@@ -593,13 +594,15 @@ impl IsServer<'static> for Downstream {
                     "workerName": worker_name.split('.').nth(1).unwrap_or("").to_string()
                 }))
                 .send();
-    
+
             match result {
                 Ok(response) => {
                     if let Ok(json) = response.json::<serde_json::Value>() {
                         if let Some(is_success) = json.get("isSuccess").and_then(|v| v.as_bool()) {
                             if is_success {
-                                if let Some(worker_id) = json.get("workerId").and_then(|v| v.as_str()) {
+                                if let Some(worker_id) =
+                                    json.get("workerId").and_then(|v| v.as_str())
+                                {
                                     shares_logger::worker_name_store::store_worker(
                                         worker_name.clone(),
                                         worker_id.to_string(),
@@ -619,7 +622,7 @@ impl IsServer<'static> for Downstream {
                 }
             }
         });
-    
+
         handle.join().unwrap_or(false)
     }
 
@@ -629,10 +632,17 @@ impl IsServer<'static> for Downstream {
         info!("Down: Submitting Share {:?}", request);
         debug!("Down: Handling mining.submit: {:?}", &request);
 
-        // TODO: Check if receiving valid shares by adding diff field to Downstream
         SHARES_RECEIVED.inc();
 
-        if request.job_id == self.last_job_id {
+        let is_valid = request.job_id == self.last_job_id
+            || self
+                .last_job_id
+                .parse::<i64>()
+                .ok()
+                .zip(request.job_id.parse::<i64>().ok())
+                .map_or(false, |(last, req)| req == last - 1);
+
+        if is_valid {
             SHARES_VALID_JOBID.inc();
             let to_send = SubmitShareWithChannelId {
                 channel_id: self.connection_id,
@@ -646,12 +656,12 @@ impl IsServer<'static> for Downstream {
                 .try_send(DownstreamMessages::SubmitShares(to_send))
                 .unwrap();
 
-            true
-        } else {
-            SHRT_FN_HANDLE_SUBMIT_REFUSED.inc();
-            REFUSED_SHARES_SUMMARY.inc();
-            false
+            return true;
         }
+
+        SHRT_FN_HANDLE_SUBMIT_REFUSED.inc();
+        REFUSED_SHARES_SUMMARY.inc();
+        false
     }
 
     /// Indicates to the server that the client supports the mining.set_extranonce method.

@@ -1611,7 +1611,7 @@ impl ProxyExtendedChannelFactory {
             .ok_or(Error::ShareDoNotMatchAnyJob)?
             .0;
 
-        if referenced_job.job_id != m.job_id {
+        if referenced_job.job_id != m.job_id && referenced_job.job_id - 1 != m.job_id {
             let error = SubmitSharesError {
                 channel_id: m.channel_id,
                 sequence_number: m.sequence_number,
