@@ -6,7 +6,7 @@ use crate::storage::clickhouse::ConnectionPool;
 use crate::traits::ShareStorage;
 use async_trait::async_trait;
 use clickhouse::Client;
-use log::info;
+use log::{info, error};
 use std::sync::Arc;
 
 use nomium_prometheus::SHALOG_BATCH_SIZE_CURRENT;
@@ -138,7 +138,7 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
 
         let batch_to_flush = self.batch.clone();
         let batch_size = batch_to_flush.len();
-        log::info!("Flushing batch of {} records", batch_size);
+        info!("Flushing batch of {} records", batch_size);
 
         let client = self.get_client().await?;
         let mut batch_inserter = client
@@ -148,20 +148,20 @@ impl ShareStorage<ShareLog> for ClickhouseStorage {
         for share in batch_to_flush.iter() {
             let clickhouse_share = ClickhouseShare::from(share.clone());
             if let Err(e) = batch_inserter.write(&clickhouse_share).await {
-                log::error!("Failed to write share during flush: {}. Retrying later.", e);
+                error!("Failed to write share during flush: {}. Retrying later.", e);
                 return Err(ClickhouseError::BatchInsertError(e.to_string()));
             }
         }
 
         if let Err(e) = batch_inserter.end().await {
-            log::error!("Failed to complete batch insert: {}. Retrying later.", e);
+            error!("Failed to complete batch insert: {}. Retrying later.", e);
             return Err(ClickhouseError::BatchInsertError(e.to_string()));
         }
 
         self.batch.clear();
         SHALOG_BATCH_SIZE_CURRENT.set(self.batch.len() as i64);
         self.last_flush = std::time::Instant::now();
-        log::info!("Successfully flushed {} records", batch_size);
+        info!("Successfully flushed {} records", batch_size);
         Ok(())
     }
 }
@@ -196,7 +196,7 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         }
         let batch_to_flush = self.batch.clone();
         let batch_size = batch_to_flush.len();
-        log::info!("Flushing batch of {} block records", batch_size);
+        info!("Flushing batch of {} block records", batch_size);
 
         let client = self.get_client().await?;
         let mut batch_inserter = client
@@ -206,13 +206,13 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
         for block in batch_to_flush.iter() {
             let clickhouse_block = ClickhouseBlock::from(block.clone());
             if let Err(e) = batch_inserter.write(&clickhouse_block).await {
-                log::error!("Failed to write block during flush: {}. Retrying later.", e);
+                error!("Failed to write block during flush: {}. Retrying later.", e);
                 return Err(ClickhouseError::BatchInsertError(e.to_string()));
             }
         }
 
         if let Err(e) = batch_inserter.end().await {
-            log::error!(
+            error!(
                 "Failed to complete batch insert for blocks: {}. Retrying later.",
                 e
             );
@@ -221,7 +221,7 @@ impl ShareStorage<BlockFound> for ClickhouseBlockStorage {
 
         self.batch.clear();
         self.last_flush = std::time::Instant::now();
-        log::info!("Successfully flushed {} block records", batch_size);
+        info!("Successfully flushed {} block records", batch_size);
         Ok(())
     }
 }
