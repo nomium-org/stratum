@@ -1,4 +1,4 @@
-use super::queries::{CREATE_BLOCKS_TABLE, CREATE_HASHRATE_VIEW, CREATE_SHARES_TABLE};
+use super::queries::{CREATE_BLOCKS_TABLE, CREATE_SHARES_TABLE};
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use crate::models::{BlockFound, ClickhouseBlock, ClickhouseShare, ShareLog};
@@ -60,18 +60,7 @@ impl ClickhouseStorage {
                 ClickhouseError::TableCreationError(format!("Failed to create shares table: {}", e))
             })?;
 
-        client
-            .query(CREATE_HASHRATE_VIEW)
-            .execute()
-            .await
-            .map_err(|e| {
-                ClickhouseError::TableCreationError(format!(
-                    "Failed to create materialized view: {}",
-                    e
-                ))
-            })?;
-
-        info!("Table and materialized view created or already exist");
+        info!("Table SHARES created or already exist");
         Ok(())
     }
 }
