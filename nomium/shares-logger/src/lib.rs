@@ -41,8 +41,7 @@ lazy_static! {
 
 lazy_static! {
     static ref BLOCK_LOGGER: ShareLogger<BlockFound> = {
-        let storage =
-            ClickhouseBlockStorage::new().expect("Failed to create ClickHouse block storage");
+        let storage = ClickhouseBlockStorage::new().expect("Failed to create ClickHouse block storage");
         ShareLoggerBuilder::<BlockFound>::new(Box::new(storage)).build()
     };
 }

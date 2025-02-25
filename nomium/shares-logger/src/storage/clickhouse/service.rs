@@ -15,28 +15,28 @@ use nomium_prometheus::SHALOG_BATCH_SIZE_CURRENT;
 pub struct ClickhouseStorage {
     batch: Vec<ShareLog>,
     last_flush: std::time::Instant,
-    pool: Arc<ConnectionPool>,
+    connection_pool: Arc<ConnectionPool>,
 }
 
 #[derive(Clone)]
 pub struct ClickhouseBlockStorage {
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
-    pool: Arc<ConnectionPool>,
+    connection_pool: Arc<ConnectionPool>,
 }
 
 impl ClickhouseStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
-        let pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
+        let connection_pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
         Ok(Self {
-            pool,
+            connection_pool,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         })
     }
 
     async fn get_client(&self) -> Result<Client, ClickhouseError> {
-        let conn = self.pool.get_connection().await?;
+        let conn = self.connection_pool.get_connection().await?;
         let client = {
             let conn_guard = conn.lock().await;
             conn_guard
@@ -44,7 +44,7 @@ impl ClickhouseStorage {
                 .clone()
                 .ok_or_else(|| ClickhouseError::ConnectionError("No client available".into()))?
         };
-        self.pool.release_connection(conn).await;
+        self.connection_pool.release_connection(conn).await;
         Ok(client)
     }
 
@@ -79,17 +79,17 @@ impl ClickhouseStorage {
 impl ClickhouseBlockStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
         info!("Initializing ClickhouseBlockStorage...");
-        let pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
+        let connection_pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
 
         Ok(Self {
-            pool,
+            connection_pool,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
             last_flush: std::time::Instant::now(),
         })
     }
 
     async fn get_client(&self) -> Result<Client, ClickhouseError> {
-        let conn = self.pool.get_connection().await?;
+        let conn = self.connection_pool.get_connection().await?;
         let client = {
             let conn_guard = conn.lock().await;
             conn_guard
@@ -97,7 +97,7 @@ impl ClickhouseBlockStorage {
                 .clone()
                 .ok_or_else(|| ClickhouseError::ConnectionError("No client available".into()))?
         };
-        self.pool.release_connection(conn).await;
+        self.connection_pool.release_connection(conn).await;
         Ok(client)
     }
 
