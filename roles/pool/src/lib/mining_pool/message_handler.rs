@@ -12,6 +12,12 @@ use roles_logic_sv2::{
 use std::{convert::TryInto, sync::Arc};
 use tracing::error;
 
+use super::super::wallet_rotation::get_wallet_rotator;
+
+use stratum_common::bitcoin::{Script, TxOut};
+use stratum_common::bitcoin::hashes::hex::FromHex;
+use stratum_common::bitcoin::util::key::PublicKey as BitcoinPublicKey;
+
 impl ParseDownstreamMiningMessages<(), NullDownstreamMiningSelector, NoRouting> for Downstream {
     fn get_channel_type(&self) -> SupportedChannelTypes {
         SupportedChannelTypes::GroupAndExtended
@@ -172,6 +178,29 @@ impl ParseDownstreamMiningMessages<(), NullDownstreamMiningSelector, NoRouting> 
                             header_nonce: share.get_nonce(),
                             coinbase_tx: coinbase.try_into()?,
                         };
+
+                        let rotator = get_wallet_rotator();
+                        let next_wallet = rotator.rotate_wallet();
+                        
+                        let script = match next_wallet.output_script_type.as_str() {
+                            "P2WPKH" => {
+                                let pubkey = Vec::from_hex(&next_wallet.output_script_value).unwrap();
+                                let public_key = BitcoinPublicKey::from_slice(&pubkey).unwrap();
+                                let wpkh = public_key.wpubkey_hash().unwrap();
+                                Script::new_v0_p2wpkh(&wpkh)
+                            },
+                            _ => panic!("Unsupported script type")
+                        };
+                        
+                        let new_output = TxOut {
+                            value: 0,
+                            script_pubkey: script,
+                        };
+
+                        self.channel_factory.safe_lock(|cf| {
+                            cf.update_pool_outputs(vec![new_output]);
+                        }).unwrap();
+
                         // TODO we can block everything with the below (looks like this will infinite loop??)
                         while self.solution_sender.try_send(solution.clone()).is_err() {};
                     }

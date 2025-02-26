@@ -10,6 +10,7 @@ use tracing::Level;
 use std::str::FromStr;
 use std::env;
 use tokio::{signal, select};
+use lib::wallet_rotation::{initialize_wallet_rotator, WalletConfig};
 
 mod args {
     use std::path::PathBuf;
@@ -165,6 +166,49 @@ tracing_subscriber::registry()
         }
         _ => { /*  или ничего :) */ }
     }
+
+    // ротатор --
+
+    let mut wallet_configs = Vec::new();
+    
+    if let (Ok(type1), Ok(value1)) = (
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_TYPE"),
+        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_VALUE")
+    ) {
+        wallet_configs.push(WalletConfig {
+            output_script_type: type1,
+            output_script_value: value1,
+        });
+    } else if let Some(output) = config.coinbase_outputs.get(0) {
+        wallet_configs.push(WalletConfig {
+            output_script_type: output.get_output_script_type().clone(),
+            output_script_value: output.get_output_script_value().clone(),
+        });
+    }
+    
+    if let (Ok(type2), Ok(value2)) = (
+        env::var("POOL__COINBASE_OUTPUTS_1_OUTPUT_SCRIPT_TYPE"),
+        env::var("POOL__COINBASE_OUTPUTS_1_OUTPUT_SCRIPT_VALUE")
+    ) {
+        wallet_configs.push(WalletConfig {
+            output_script_type: type2,
+            output_script_value: value2,
+        });
+    } else if let Some(output) = config.coinbase_outputs.get(1) {
+        wallet_configs.push(WalletConfig {
+            output_script_type: output.get_output_script_type().clone(),
+            output_script_value: output.get_output_script_value().clone(),
+        });
+    }
+    
+    if wallet_configs.is_empty() {
+        error!("No wallet configurations found!");
+        return;
+    }
+    
+    initialize_wallet_rotator(wallet_configs);
+
+    // -- ротатор
 
     let pool = PoolSv2::new(config);
 
