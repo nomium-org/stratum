@@ -1,6 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info};
+use std::env;
+use crate::Configuration; 
 
 pub struct WalletRotator {
     current_wallet_index: AtomicUsize,
@@ -52,6 +54,24 @@ impl WalletRotator {
 
 use std::sync::OnceLock;
 static WALLET_ROTATOR: OnceLock<Arc<WalletRotator>> = OnceLock::new();
+
+pub fn get_wallet_config(index: usize, config: &Configuration) -> Option<WalletConfig> {
+    let env_result = (
+        env::var(format!("POOL__COINBASE_OUTPUTS_{}_OUTPUT_SCRIPT_TYPE", index)),
+        env::var(format!("POOL__COINBASE_OUTPUTS_{}_OUTPUT_SCRIPT_VALUE", index))
+    );
+
+    match env_result {
+        (Ok(type_), Ok(value)) => Some(WalletConfig {
+            output_script_type: type_,
+            output_script_value: value,
+        }),
+        _ => config.coinbase_outputs.get(index).map(|output| WalletConfig {
+            output_script_type: output.get_output_script_type().clone(),
+            output_script_value: output.get_output_script_value().clone(),
+        })
+    }
+}
 
 pub fn initialize_wallet_rotator(wallets: Vec<WalletConfig>) {
     let _ = WALLET_ROTATOR.set(WalletRotator::new(wallets));
