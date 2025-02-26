@@ -44,7 +44,17 @@ impl WalletRotator {
         let next = (current + 1) % self.wallets.len();
         self.current_wallet_index.store(next, Ordering::Relaxed);
         
-        info!("Rotated wallet from {} to {}", current, next);
+        info!(
+            "Rotating wallet from {} to {}", 
+            current,
+            next
+        );
+        info!(
+            "New active wallet: Type={}, PubKey={}", 
+            self.wallets[next].output_script_type,
+            self.wallets[next].output_script_value
+        );
+        
         WalletConfig {
             output_script_type: self.wallets[next].output_script_type.clone(),
             output_script_value: self.wallets[next].output_script_value.clone(),
