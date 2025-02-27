@@ -74,13 +74,21 @@ impl CoinbaseOutput {
         }
     }
 
+    pub fn get_output_script_type(&self) -> &String {
+        &self.output_script_type
+    }
+    
+    pub fn get_output_script_value(&self) -> &String {
+        &self.output_script_value
+    }
+
     pub fn set_output_script_type(&mut self, value: String) {
         self.output_script_type = value;
     }
 
     pub fn set_output_script_value(&mut self, value: String) {
         self.output_script_value = value;
-    }
+    }    
 }
 
 impl TryFrom<&CoinbaseOutput> for CoinbaseOutput_ {
