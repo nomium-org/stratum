@@ -31,14 +31,6 @@ impl WalletRotator {
         })
     }
     
-    pub fn get_current_wallet(&self) -> WalletConfig {
-        let index = self.current_wallet_index.load(Ordering::Relaxed);
-        WalletConfig {
-            output_script_type: self.wallets[index].output_script_type.clone(),
-            output_script_value: self.wallets[index].output_script_value.clone(),
-        }
-    }
-    
     pub fn rotate_wallet(&self) -> WalletConfig {
         let current = self.current_wallet_index.load(Ordering::Relaxed);
         let next = (current + 1) % self.wallets.len();
