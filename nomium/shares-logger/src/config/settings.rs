@@ -15,7 +15,6 @@ pub struct ClickhouseSettings {
     pub batch_size: usize,
     pub batch_flush_interval_secs: u64,
     pub pool_size: usize,
-    pub max_connection_retries: u32,
     pub base_retry_delay_ms: u64,
     pub max_retry_delay_secs: u64,
 }

@@ -5,7 +5,7 @@ use clickhouse::Client;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use std::time::Instant;
-use log::{debug, warn, error};
+use log::{debug, warn};
 
 pub struct PooledConnection {
     pub client: Option<Client>,
@@ -24,7 +24,6 @@ impl ClickhouseConnectionPool {
     pub fn new(pool_size: usize) -> Self {
         debug!("Initializing connection pool with size {}", pool_size);
         let retry_config = RetryConfig::new(
-            SETTINGS.clickhouse.max_connection_retries,
             SETTINGS.clickhouse.base_retry_delay_ms,
             SETTINGS.clickhouse.max_retry_delay_secs,
         );
@@ -52,10 +51,6 @@ impl ClickhouseConnectionPool {
             match self.try_create_connection().await {
                 Ok(client) => return Ok(client),
                 Err(e) => {
-                    if attempt >= self.retry_config.max_retries {
-                        error!("Max connection retries ({}) reached", self.retry_config.max_retries);
-                        return Err(e);
-                    }
                     let delay = self.retry_config.get_delay(attempt);
                     warn!("Connection attempt {} failed, retrying after {:?}: {}", attempt, delay, e);
                     tokio::time::sleep(delay).await;
