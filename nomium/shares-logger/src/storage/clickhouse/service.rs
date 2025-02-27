@@ -2,7 +2,7 @@ use super::queries::{CREATE_BLOCKS_TABLE, CREATE_SHARES_TABLE};
 use crate::config::SETTINGS;
 use crate::errors::ClickhouseError;
 use crate::models::{BlockFound, ClickhouseBlock, ClickhouseShare, ShareLog};
-use crate::storage::clickhouse::ConnectionPool;
+use crate::storage::clickhouse::ClickhouseConnectionPool;
 use crate::traits::ShareStorage;
 use async_trait::async_trait;
 use clickhouse::Client;
@@ -15,19 +15,19 @@ use nomium_prometheus::SHALOG_BATCH_SIZE_CURRENT;
 pub struct ClickhouseStorage {
     batch: Vec<ShareLog>,
     last_flush: std::time::Instant,
-    connection_pool: Arc<ConnectionPool>,
+    connection_pool: Arc<ClickhouseConnectionPool>,
 }
 
 #[derive(Clone)]
 pub struct ClickhouseBlockStorage {
     batch: Vec<BlockFound>,
     last_flush: std::time::Instant,
-    connection_pool: Arc<ConnectionPool>,
+    connection_pool: Arc<ClickhouseConnectionPool>,
 }
 
 impl ClickhouseStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
-        let connection_pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
+        let connection_pool = Arc::new(ClickhouseConnectionPool::new(SETTINGS.clickhouse.pool_size));
         Ok(Self {
             connection_pool,
             batch: Vec::with_capacity(SETTINGS.clickhouse.batch_size),
@@ -68,7 +68,7 @@ impl ClickhouseStorage {
 impl ClickhouseBlockStorage {
     pub fn new() -> Result<Self, ClickhouseError> {
         info!("Initializing ClickhouseBlockStorage...");
-        let connection_pool = Arc::new(ConnectionPool::new(SETTINGS.clickhouse.pool_size));
+        let connection_pool = Arc::new(ClickhouseConnectionPool::new(SETTINGS.clickhouse.pool_size));
 
         Ok(Self {
             connection_pool,

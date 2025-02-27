@@ -1,6 +1,6 @@
 use crate::errors::ClickhouseError;
 use crate::config::SETTINGS;
-use crate::storage::clickhouse::retry::RetryConfig;
+use crate::storage::clickhouse::retry_config::RetryConfig;
 use clickhouse::Client;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
@@ -13,14 +13,14 @@ pub struct PooledConnection {
     last_used: Instant,
 }
 
-pub struct ConnectionPool {
+pub struct ClickhouseConnectionPool {
     connections: Vec<Arc<Mutex<PooledConnection>>>,
     pool_size: usize,
     semaphore: Arc<Semaphore>,
     retry_config: RetryConfig,
 }
 
-impl ConnectionPool {
+impl ClickhouseConnectionPool {
     pub fn new(pool_size: usize) -> Self {
         debug!("Initializing connection pool with size {}", pool_size);
         let retry_config = RetryConfig::new(
