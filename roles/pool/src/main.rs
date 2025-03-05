@@ -10,6 +10,7 @@ use tracing::Level;
 use std::str::FromStr;
 use std::env;
 use tokio::{signal, select};
+use lib::wallet_rotation::{get_wallet_config, initialize_wallet_rotator, WalletConfig};
 
 mod args {
     use std::path::PathBuf;
@@ -148,23 +149,29 @@ tracing_subscriber::registry()
         }
     };
 
-    match (
-        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_TYPE"),
-        env::var("POOL__COINBASE_OUTPUTS_0_OUTPUT_SCRIPT_VALUE"),
-    ) {
-        (Ok(output_script_type), Ok(output_script_value)) => {
-            match config.coinbase_outputs.get_mut(0) {
-                Some(output) => {
-                    output.set_output_script_type(output_script_type);
-                    output.set_output_script_value(output_script_value);
-                    debug!("Overridden coinbase output: {:?}", output);
-                }
-                None => error!("coinbase_outputs is empty, cannot override values"),
-            }
+
+    // ротатор --
+    let wallet_configs: Vec<WalletConfig> = (0..2)
+    .filter_map(|i| get_wallet_config(i, &config))
+    .collect();
+
+    if wallet_configs.is_empty() {
+        error!("No wallet configurations found!");
+        return;
+    }
+
+    if let Some(first_wallet) = wallet_configs.first() {
+        if let Some(output) = config.coinbase_outputs.get_mut(0) {
+            output.set_output_script_type(first_wallet.output_script_type.clone());
+            output.set_output_script_value(first_wallet.output_script_value.clone());
+            debug!("Overridden coinbase output: {:?}", output);
             debug!("Full config after override: {:?}", config);
         }
-        _ => { /*  или ничего :) */ }
     }
+
+    initialize_wallet_rotator(wallet_configs);
+
+    // -- ротатор
 
     let pool = PoolSv2::new(config);
 
