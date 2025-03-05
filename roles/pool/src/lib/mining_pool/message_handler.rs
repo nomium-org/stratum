@@ -189,6 +189,12 @@ impl ParseDownstreamMiningMessages<(), NullDownstreamMiningSelector, NoRouting> 
                                 let wpkh = public_key.wpubkey_hash().unwrap();
                                 Script::new_v0_p2wpkh(&wpkh)
                             },
+                            "P2WSH" => {
+                                let script_bytes = Vec::from_hex(&next_wallet.output_script_value).unwrap();
+                                let witness_script = Script::from(script_bytes);
+                                let script_hash = witness_script.wscript_hash();
+                                Script::new_v0_p2wsh(&script_hash)
+                            },
                             _ => panic!("Unsupported script type")
                         };
                         
