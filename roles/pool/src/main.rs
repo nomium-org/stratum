@@ -1,16 +1,16 @@
 #![allow(special_module_name)]
 
 mod lib;
-use ext_config::{Config, File, FileFormat, Environment};
-pub use lib::{mining_pool::Configuration, status, PoolSv2};
-use tracing::{error, debug};
-use tracing_subscriber::prelude::*;
 use dotenvy::dotenv;
-use tracing::Level;
-use std::str::FromStr;
+use ext_config::{Config, Environment, File, FileFormat};
+pub use lib::{mining_pool::Configuration, status, PoolSv2};
 use std::env;
-use tokio::{signal, select};
 use lib::wallet_rotation::{get_wallet_config, initialize_wallet_rotator, WalletConfig};
+use std::str::FromStr;
+use tokio::{select, signal};
+use tracing::Level;
+use tracing::{debug, error};
+use tracing_subscriber::prelude::*;
 
 mod args {
     use std::path::PathBuf;
@@ -85,32 +85,36 @@ fn get_log_level(env_var: &str, default: Level) -> Level {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-let file_log_level = get_log_level("POOL_LOG_LEVEL_FILE", Level::INFO);
-let console_log_level = get_log_level("POOL_LOG_LEVEL_CONSOLE", Level::DEBUG);
+    let file_log_level = get_log_level("POOL_LOG_LEVEL_FILE", Level::INFO);
+    let console_log_level = get_log_level("POOL_LOG_LEVEL_CONSOLE", Level::DEBUG);
 
-let file_appender = tracing_appender::rolling::RollingFileAppender::new(
-    tracing_appender::rolling::Rotation::DAILY,
-    "logs",
-    "Pool.log",
-);
+    let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+        tracing_appender::rolling::Rotation::DAILY,
+        "logs",
+        "Pool.log",
+    );
 
-tracing_subscriber::registry()
-    .with(
-        tracing_subscriber::fmt::layer()
-            .with_writer(file_appender)
-            .with_ansi(false)
-            .with_thread_ids(true)
-            .with_thread_names(true)
-            .with_file(true)
-            .with_line_number(true)
-            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(file_log_level))
-    )
-    .with(
-        tracing_subscriber::fmt::layer()
-            .with_writer(std::io::stdout)
-            .with_filter(tracing_subscriber::filter::LevelFilter::from_level(console_log_level))
-    )
-    .init();
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(file_appender)
+                .with_ansi(false)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_file(true)
+                .with_line_number(true)
+                .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
+                    file_log_level,
+                )),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stdout)
+                .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
+                    console_log_level,
+                )),
+        )
+        .init();
 
     let args = match args::Args::from_args() {
         Ok(cfg) => cfg,
@@ -137,7 +141,7 @@ tracing_subscriber::registry()
                 debug!("TP Address: {}", c.tp_address);
                 debug!("Full config: {:?}", c);
                 c
-            },
+            }
             Err(e) => {
                 error!("Failed to deserialize config: {}", e);
                 return;
@@ -151,6 +155,7 @@ tracing_subscriber::registry()
 
 
     // ротатор --
+    
     let wallet_configs: Vec<WalletConfig> = (0..2)
     .filter_map(|i| get_wallet_config(i, &config))
     .collect();
@@ -172,6 +177,23 @@ tracing_subscriber::registry()
     initialize_wallet_rotator(wallet_configs);
 
     // -- ротатор
+
+    if let Ok(addr) = env::var("POOL__LISTEN_ADDRESS") {
+        config.set_listen_address(addr.clone());
+        debug!("Overridden listen_address: {}", addr);
+    }
+
+    if let Ok(addr) = env::var("POOL__TP_ADDRESS") {
+        config.set_tp_address(addr.clone());
+        debug!("Overridden tp_address: {}", addr);
+    }
+
+    if let Ok(key) = env::var("POOL__TP_AUTHORITY_PUBLIC_KEY") {
+        config.set_tp_authority_public_key(key.clone());
+        debug!("Overridden tp_authority_public_key: {}", key);
+    }
+
+    debug!("Full config after all overrides: {:?}", config);
 
     let pool = PoolSv2::new(config);
 
