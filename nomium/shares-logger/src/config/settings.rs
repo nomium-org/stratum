@@ -36,9 +36,9 @@ impl Settings {
         
         let default_config = include_str!("default_config.toml");
         
-        log::info!("Logging environment variables with prefix SHARES_LOGGER:");
+        log::info!(target: "shares", "Logging environment variables with prefix SHARES_LOGGER:");
         log_environment_variables();
-        log::info!("Loading configuration from default_config.toml...");
+        log::info!(target: "shares", "Loading configuration from default_config.toml...");
         
         let builder = Config::builder()
             .add_source(File::from_str(
@@ -54,7 +54,7 @@ impl Settings {
         let settings = builder.try_deserialize::<Settings>();
         
         match &settings {
-            Ok(s) => log::info!("Loaded configuration: {:?}", s),
+            Ok(s) => log::info!(target: "shares", "Loaded configuration: {:?}", s),
             Err(e) => log::error!("Failed to load configuration: {:?}", e),
         };
         
@@ -72,7 +72,7 @@ pub static SETTINGS: Lazy<Settings> = Lazy::new(|| {
 fn log_environment_variables() {
     for (key, value) in std::env::vars() {
         if key.starts_with("SHARES_LOGGER") {
-            info!("Environment variable: {} = {}", key, value);
+            info!(target: "shares", "Environment variable: {} = {}", key, value);
         }
     }
 }

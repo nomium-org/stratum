@@ -46,6 +46,13 @@ fn get_log_level(env_var: &str, default: Level) -> Level {
     }
 }
 
+fn should_show_shares_logs() -> bool {
+    match std::env::var("TPROXY__LOG_TARGET_SHARES_SHOW") {
+        Ok(val) => val.to_lowercase() == "true",
+        Err(_) => true,
+    }
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -77,7 +84,16 @@ async fn main() {
                 .with_writer(std::io::stdout)
                 .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
                     console_log_level,
-                )),
+                ))
+                .with_filter(
+                    tracing_subscriber::filter::filter_fn(move |metadata| {
+                        if metadata.target().starts_with("shares") {
+                            should_show_shares_logs()
+                        } else {
+                            metadata.level() <= &file_log_level
+                        }
+                    })
+                )
         )
         .init();
 
@@ -85,6 +101,7 @@ async fn main() {
         Ok(p) => p,
         Err(e) => panic!("failed to load config: {}", e),
     };
+    info!(target: "shares::clickhouse", "Just for test");
     info!("Proxy Config: {:?}", &proxy_config);
 
     metrics::start_metrics_server();
