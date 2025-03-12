@@ -82,6 +82,13 @@ fn get_log_level(env_var: &str, default: Level) -> Level {
     }
 }
 
+fn should_show_config_logs() -> bool {
+    match std::env::var("POOL__LOG_TARGET_CONFIG_SHOW") {
+        Ok(val) => val.to_lowercase() == "true",
+        Err(_) => true,
+    }
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -112,7 +119,16 @@ async fn main() {
                 .with_writer(std::io::stdout)
                 .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
                     console_log_level,
-                )),
+                ))
+                .with_filter(
+                    tracing_subscriber::filter::filter_fn(move |metadata| {
+                        if metadata.target() == "config" {
+                            should_show_config_logs()
+                        } else {
+                            metadata.level() <= &file_log_level
+                        }
+                    })
+                ),
         )
         .init();
 
@@ -137,9 +153,9 @@ async fn main() {
     {
         Ok(settings) => match settings.try_deserialize::<Configuration>() {
             Ok(c) => {
-                debug!("Configuration loaded successfully");
-                debug!("TP Address: {}", c.tp_address);
-                debug!("Full config: {:?}", c);
+                debug!(target: "config", "Configuration loaded successfully");
+                debug!(target: "config", "TP Address: {}", c.tp_address);
+                debug!(target: "config", "Full config: {:?}", c);
                 c
             }
             Err(e) => {
