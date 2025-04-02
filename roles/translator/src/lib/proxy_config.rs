@@ -4,22 +4,15 @@ use std::env;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProxyConfig {
-    #[serde(default = "default_upstream_address")]
     pub upstream_address: String,
-    #[serde(default = "default_upstream_port")]
     pub upstream_port: u16,
-    #[serde(default = "default_upstream_pubkey")]
     pub upstream_authority_pubkey: Secp256k1PublicKey,
-    #[serde(default = "default_downstream_address")]
     pub downstream_address: String,
-    #[serde(default = "default_downstream_port")]
     pub downstream_port: u16,
     pub max_supported_version: u16,
     pub min_supported_version: u16,
     pub min_extranonce2_size: u16,
-    #[serde(default = "default_downstream_config")]
     pub downstream_difficulty_config: DownstreamDifficultyConfig,
-    #[serde(default = "default_upstream_config")]
     pub upstream_difficulty_config: UpstreamDifficultyConfig,
 }
 
@@ -136,13 +129,11 @@ impl ProxyConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DownstreamDifficultyConfig {
-    #[serde(default = "default_min_hashrate")]
     pub min_individual_miner_hashrate: f32,
-    #[serde(default = "default_shares_per_minute")]
     pub shares_per_minute: f32,
-    #[serde(default)]
+    #[serde(default = "u32::default")]
     pub submits_since_last_update: u32,
-    #[serde(default)]
+    #[serde(default = "u64::default")]
     pub timestamp_of_last_update: u64,
 }
 
@@ -170,13 +161,11 @@ impl PartialEq for DownstreamDifficultyConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct UpstreamDifficultyConfig {
-    #[serde(default = "default_channel_diff_update_interval")]
     pub channel_diff_update_interval: u32,
-    #[serde(default = "default_channel_nominal_hashrate")]
     pub channel_nominal_hashrate: f32,
-    #[serde(default)]
+    #[serde(default = "u64::default")]
     pub timestamp_of_last_update: u64,
-    #[serde(default)]
+    #[serde(default = "bool::default")]
     pub should_aggregate: bool,
 }
 
@@ -194,60 +183,4 @@ impl UpstreamDifficultyConfig {
             should_aggregate,
         }
     }
-}
-
-fn default_upstream_address() -> String {
-    "127.0.0.1".to_string()
-}
-
-fn default_upstream_port() -> u16 {
-    34254
-}
-
-fn default_upstream_pubkey() -> Secp256k1PublicKey {
-    "9auqWEzQDVyd2oe1JVGFLMLHZtCo2FFqZwtKA5gd9xbuEu7PH72"
-        .parse()
-        .unwrap()
-}
-
-fn default_downstream_address() -> String {
-    "0.0.0.0".to_string()
-}
-
-fn default_downstream_port() -> u16 {
-    34255
-}
-
-fn default_downstream_config() -> DownstreamDifficultyConfig {
-    DownstreamDifficultyConfig {
-        min_individual_miner_hashrate: default_min_hashrate(),
-        shares_per_minute: default_shares_per_minute(),
-        submits_since_last_update: 0,
-        timestamp_of_last_update: 0,
-    }
-}
-
-fn default_upstream_config() -> UpstreamDifficultyConfig {
-    UpstreamDifficultyConfig {
-        channel_diff_update_interval: default_channel_diff_update_interval(),
-        channel_nominal_hashrate: default_channel_nominal_hashrate(),
-        timestamp_of_last_update: 0,
-        should_aggregate: false,
-    }
-}
-
-fn default_min_hashrate() -> f32 {
-    15_000_000.0
-}
-
-fn default_shares_per_minute() -> f32 {
-    10.0
-}
-
-fn default_channel_diff_update_interval() -> u32 {
-    60
-}
-
-fn default_channel_nominal_hashrate() -> f32 {
-    15_000_000.0
 }
