@@ -788,6 +788,7 @@ impl ChannelFactory {
         bits: u32,
     ) -> Result<OnNewShare, Error> {
         debug!("Checking target for share {:?}", m);
+        
         let upstream_target = match &self.kind {
             ExtendedChannelKind::Pool => Target::new(0, 0),
             ExtendedChannelKind::Proxy {
@@ -796,11 +797,14 @@ impl ChannelFactory {
             | ExtendedChannelKind::ProxyJd {
                 upstream_target, ..
             } => upstream_target.clone(),
-        };
+        }; 
 
         let (downstream_target, extranonce) = self
             .get_channel_specific_mining_info(&m)
             .ok_or(Error::ShareDoNotMatchAnyChannel)?;
+        // Nomium ----
+        //let upstream_target = downstream_target.clone();
+        // ---- Nomium
         let extranonce_1_len = self.extranonces.get_range0_len();
         let extranonce_2 = extranonce[extranonce_1_len..].to_vec();
         match &mut m {
@@ -895,9 +899,27 @@ impl ChannelFactory {
         let received_at = shares_logger::get_utc_now();
 
         match self.kind {
-            ExtendedChannelKind::Pool => {},
-            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
+            ExtendedChannelKind::Pool => {
                 let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
+                    m.get_channel_id(),
+                    m.get_sequence_number(),
+                    m.get_job_id(),
+                    m.get_nonce(),
+                    m.get_n_time(),
+                    m.get_version(),
+                    hash,
+                    downstream_target.clone(),
+                    extranonce.to_vec(),
+                    user_identity,
+                    received_at,
+                    share_status_mapped,
+                );
+                info!("Calling share logging for Pool");
+                shares_logger::log_share(share_log);
+                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc();
+            },
+            ExtendedChannelKind::Proxy { .. } | ExtendedChannelKind::ProxyJd { .. } => {
+                /* let share_log = shares_logger::services::share_processor::ShareProcessor::prepare_share_log(
                     m.get_channel_id(),
                     m.get_sequence_number(),
                     m.get_job_id(),
@@ -913,7 +935,8 @@ impl ChannelFactory {
                 );
                 info!("Calling share logging for PROXY");
                 shares_logger::log_share(share_log);
-                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc();
+                nomium_prometheus::CHFACT_SHARES_LOGGED_TOTAL.inc(); */
+                info!("Calling share logging for TProxy, but nothing to do");
             }
         }
         // ---- NOMIUM share_log injection ----
