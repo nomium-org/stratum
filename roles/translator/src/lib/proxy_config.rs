@@ -17,10 +17,10 @@ pub struct ProxyConfig {
 }
 
 pub struct UpstreamConfig {
-    pub address: String,
-    pub port: u16,
-    pub authority_pubkey: Secp256k1PublicKey,
-    pub difficulty_config: UpstreamDifficultyConfig,
+    address: String,
+    port: u16,
+    authority_pubkey: Secp256k1PublicKey,
+    difficulty_config: UpstreamDifficultyConfig,
 }
 
 impl UpstreamConfig {
@@ -40,9 +40,9 @@ impl UpstreamConfig {
 }
 
 pub struct DownstreamConfig {
-    pub address: String,
-    pub port: u16,
-    pub difficulty_config: DownstreamDifficultyConfig,
+    address: String,
+    port: u16,
+    difficulty_config: DownstreamDifficultyConfig,
 }
 
 impl DownstreamConfig {

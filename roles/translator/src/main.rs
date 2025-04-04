@@ -101,7 +101,6 @@ async fn main() {
         Ok(p) => p,
         Err(e) => panic!("failed to load config: {}", e),
     };
-    info!(target: "shares::clickhouse", "Just for test");
     info!("Proxy Config: {:?}", &proxy_config);
 
     metrics::start_metrics_server();
