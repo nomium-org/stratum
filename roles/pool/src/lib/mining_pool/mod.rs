@@ -186,6 +186,25 @@ impl Configuration {
             test_only_listen_adress_plain,
         }
     }
+
+    pub fn set_listen_address(&mut self, value: String) {
+        self.listen_address = value;
+    }
+
+    pub fn set_tp_address(&mut self, value: String) {
+        self.tp_address = value;
+    }
+
+    pub fn set_tp_authority_public_key(&mut self, value: String) {
+        match Secp256k1PublicKey::try_from(value) {
+            Ok(key) => {
+                self.tp_authority_public_key = Some(key);
+            }
+            Err(e) => {
+                error!("Failed to parse tp_authority_public_key: {}", e);
+            }
+        }
+    }
 }
 
 #[derive(Debug)]

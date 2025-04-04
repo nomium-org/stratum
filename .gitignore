@@ -21,3 +21,4 @@ cobertura.xml
 /localtemp
 /roles/pool/config-examples/logs
 /roles/translator/config-examples/logs
+/roles/.env

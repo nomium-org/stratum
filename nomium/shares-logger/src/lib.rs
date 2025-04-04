@@ -119,7 +119,7 @@ impl<T: Send + Sync + Clone + Serialize + DeserializeOwned + 'static> ShareLogge
                 SHALOG_BACKUP_CHANNEL_SHARES_TOTAL.inc();
                 SHALOG_BACKUP_CHANNEL_CURRENT.inc();
                 if let Err(e) = self.backup_tx.send(share) {
-                    info!("Failed to send share to backup logger: {}", e);
+                    info!(target: "shares", "Failed to send share to backup logger: {}", e);
                 }
             }
         }
@@ -138,17 +138,17 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
         return;
     }
     let init_duration = init_start.elapsed();
-    info!("Storage initialized in: {:?}", init_duration);
+    info!(target: "shares", "Storage initialized in: {:?}", init_duration);
     let mut backup_interval = tokio::time::interval(backup_check_interval);
     loop {
         tokio::select! {
             Some(share) = primary_rx.recv() => {
-                info!("Processing share from primary channel");
+                info!(target: "shares", "Processing share from primary channel");
                 SHALOG_PRIMARY_TRY_STORED_TOTAL.inc();
                 SHALOG_PRIMARY_CHANNEL_CURRENT.dec();
                 if let Err(e) = storage.lock().await.store_share(share).await {
                     SHALOG_PRIMARY_STORE_FAILED_TOTAL.inc();
-                    info!("Failed to store share: {}", e);
+                    info!(target: "shares", "Failed to store share: {}", e);
                 }
             }
             _ = backup_interval.tick() => {
@@ -162,7 +162,7 @@ async fn process_shares<T: Send + Sync + Clone + Serialize + DeserializeOwned>(
                     SHALOG_BACKUP_TRY_STORED_TOTAL.inc_by(shares_count);
                     if let Err(e) = storage.lock().await.store_batch(backup_shares).await {
                         SHALOG_BACKUP_STORE_FAILED_TOTAL.inc_by(shares_count);
-                        info!("Failed to store backup shares: {}", e);
+                        info!(target: "shares", "Failed to store backup shares: {}", e);
                     }
                 }
             }

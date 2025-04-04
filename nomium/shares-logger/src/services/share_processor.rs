@@ -24,7 +24,7 @@ impl ShareProcessor {
         share_status: ShareStatus,
     ) -> ShareLog {
         
-        info!("Share received_at at the beginning of prepare_share_log: {}", received_at);
+        info!(target: "shares", "Share received_at at the beginning of prepare_share_log: {}", received_at);
         
         let worker_identity: Value = serde_json::from_str(&user_identity_json)
             .unwrap_or_else(|_| json!({
@@ -42,7 +42,7 @@ impl ShareProcessor {
             .unwrap_or("unknown")
             .to_string();
 
-        info!("user_identity from prepare_share_log: {}", user_identity);
+        info!(target: "shares", "user_identity from prepare_share_log: {}", user_identity);
         let mut hash_bytes = hash;
         hash_bytes.reverse();
         let difficulty = DifficultyService::calculate_difficulty_from_hash(&hash_bytes);
