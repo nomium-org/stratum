@@ -1,5 +1,6 @@
 use key_utils::Secp256k1PublicKey;
 use serde::Deserialize;
+use std::env;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProxyConfig {
@@ -74,6 +75,55 @@ impl ProxyConfig {
             downstream_difficulty_config: downstream.difficulty_config,
             upstream_difficulty_config: upstream.difficulty_config,
         }
+    }
+    
+    pub fn apply_env_overrides(mut self) -> Self {
+        if let Ok(addr) = env::var("TPROXY_CONFIG_UPSTREAM_ADDRESS") {
+            self.upstream_address = addr;
+        }
+        if let Ok(port) = env::var("TPROXY_CONFIG_UPSTREAM_PORT") {
+            if let Ok(port) = port.parse() {
+                self.upstream_port = port;
+            }
+        }
+        if let Ok(pubkey) = env::var("TPROXY_CONFIG_UPSTREAM_AUTHORITY_PUBKEY") {
+            if let Ok(key) = pubkey.parse() {
+                self.upstream_authority_pubkey = key;
+            }
+        }
+        if let Ok(addr) = env::var("TPROXY_CONFIG_DOWNSTREAM_ADDRESS") {
+            self.downstream_address = addr;
+        }
+        if let Ok(port) = env::var("TPROXY_CONFIG_DOWNSTREAM_PORT") {
+            if let Ok(port) = port.parse() {
+                self.downstream_port = port;
+            }
+        }
+
+        if let Ok(hashrate) = env::var("TPROXY_CONFIG_MIN_MINER_HASHRATE") {
+            if let Ok(hashrate) = hashrate.parse() {
+                self.downstream_difficulty_config
+                    .min_individual_miner_hashrate = hashrate;
+            }
+        }
+        if let Ok(shares) = env::var("TPROXY_CONFIG_SHARES_PER_MINUTE") {
+            if let Ok(shares) = shares.parse() {
+                self.downstream_difficulty_config.shares_per_minute = shares;
+            }
+        }
+
+        if let Ok(interval) = env::var("TPROXY_CONFIG_CHANNEL_DIFF_UPDATE_INTERVAL") {
+            if let Ok(interval) = interval.parse() {
+                self.upstream_difficulty_config.channel_diff_update_interval = interval;
+            }
+        }
+        if let Ok(hashrate) = env::var("TPROXY_CONFIG_CHANNEL_NOMINAL_HASHRATE") {
+            if let Ok(hashrate) = hashrate.parse() {
+                self.upstream_difficulty_config.channel_nominal_hashrate = hashrate;
+            }
+        }
+
+        self
     }
 }
 
