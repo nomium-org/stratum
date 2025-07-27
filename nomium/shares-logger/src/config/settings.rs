@@ -23,12 +23,23 @@ pub struct ClickhouseSettings {
 pub struct ProcessingSettings {
     pub primary_channel_buffer_size: usize,
     pub backup_check_interval_secs: u64,
+    pub block_verification_max_retries: u8,
+    pub block_verification_retry_delay_ms: u64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BitcoinRpcSettings {
+    pub url: String,
+    pub port: u16,
+    pub user: String,
+    pub password: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub clickhouse: ClickhouseSettings,
     pub processing: ProcessingSettings,
+    pub bitcoin_rpc: BitcoinRpcSettings,
 }
 
 impl Settings {

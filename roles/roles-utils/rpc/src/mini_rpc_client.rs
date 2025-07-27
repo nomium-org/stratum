@@ -87,7 +87,7 @@ impl MiniRpcClient {
         }
     }
 
-    async fn send_json_rpc_request(
+    pub async fn send_json_rpc_request(
         &self,
         method: &str,
         params: serde_json::Value,

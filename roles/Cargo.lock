@@ -3043,6 +3043,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "primitive-types",
+ "rpc_sv2",
  "serde",
  "serde_json",
  "tokio",
